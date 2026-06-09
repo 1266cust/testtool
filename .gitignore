@@ -1,0 +1,8 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.idea/
+.vscode/
+# 如果有压测生成的临时日志或大文件，也可以加在这里，例如：
+*.log

@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>测试用例生成工具</title>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .chat-container {
+        width: 100%;
+        max-width: 800px;
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        overflow: hidden;
+      }
+      .chat-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+        padding: 20px 24px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .chat-header h1 { margin: 0; font-size: 20px; font-weight: 600; }
+      .chat-header .subtitle { font-size: 13px; opacity: 0.85; }
+      .chat-body { padding: 24px; max-height: 70vh; overflow-y: auto; }
+      .message { margin-bottom: 16px; display: flex; gap: 12px; }
+      .message.user { flex-direction: row-reverse; }
+      .avatar {
+        width: 36px; height: 36px;
+        border-radius: 50%;
+        background: #e5e7eb;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        color: #6b7280;
+      }
+      .avatar.bot {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+      }
+      .avatar.user { background: #10b981; color: #fff; }
+      .message-content {
+        background: #f3f4f6;
+        padding: 12px 16px;
+        border-radius: 12px;
+        max-width: 80%;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .message.user .message-content { background: #dbeafe; }
+      .input-area {
+        padding: 20px 24px;
+        border-top: 1px solid #e5e7eb;
+        background: #f9fafb;
+      }
+      .input-wrapper { display: flex; gap: 12px; align-items: flex-end; }
+      .text-input-container { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+      .text-input {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1px solid #d1d5db;
+        border-radius: 12px;
+        font-size: 14px;
+        resize: vertical;
+        min-height: 60px;
+        max-height: 200px;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .text-input:focus { border-color: #667eea; }
+      .file-upload-area { display: flex; gap: 8px; align-items: center; }
+      .upload-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        background: #fff;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 13px;
+        color: #4b5563;
+        transition: all 0.2s;
+      }
+      .upload-btn:hover { background: #f3f4f6; border-color: #667eea; }
+      .upload-btn svg { width: 18px; height: 18px; }
+      .file-input { display: none; }
+      .preview-area { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+      .preview-item {
+        position: relative;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #f3f4f6;
+      }
+      .preview-item.image { width: 80px; height: 80px; }
+      .preview-item.file {
+        padding: 8px 12px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: #4b5563;
+      }
+      .preview-item .remove-btn {
+        position: absolute;
+        top: 2px; right: 2px;
+        width: 20px; height: 20px;
+        background: #ef4444;
+        color: #fff;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        opacity: 0.9;
+      }
+      .preview-item.image img { width: 100%; height: 100%; object-fit: cover; }
+      .settings-row { display: flex; gap: 16px; margin-top: 12px; flex-wrap: wrap; }
+      .setting-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+      .setting-item label { color: #6b7280; }
+      .setting-item select,
+      .setting-item input[type="number"] {
+        padding: 6px 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 13px;
+        outline: none;
+      }
+      .setting-item input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+      .submit-btn {
+        padding: 12px 24px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      .submit-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      }
+      .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+      .result-area {
+        padding: 24px;
+        background: #f0fdf4;
+        border-radius: 12px;
+        margin-top: 16px;
+      }
+      .result-area.error { background: #fef2f2; }
+      .result-title {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        color: #047857;
+      }
+      .result-area.error .result-title { color: #b91c1c; }
+      .download-links { display: flex; gap: 12px; flex-wrap: wrap; }
+      .download-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 16px;
+        background: #fff;
+        border: 1px solid #10b981;
+        border-radius: 8px;
+        color: #10b981;
+        text-decoration: none;
+        font-size: 14px;
+        transition: all 0.2s;
+      }
+      .download-link:hover { background: #10b981; color: #fff; }
+      .review-area {
+        padding: 20px;
+        background: #fefce8;
+        border-radius: 12px;
+        margin-top: 16px;
+      }
+      .review-title {
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        color: #a16207;
+      }
+      .review-stats {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+      }
+      .stat-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .stat-label { font-size: 12px; color: #6b7280; }
+      .stat-value { font-size: 18px; font-weight: 600; color: #047857; }
+      .review-issues { margin-top: 12px; }
+      .issue-item {
+        padding: 8px 12px;
+        background: #fff;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        font-size: 13px;
+      }
+      .issue-item.severity-high { border-left: 3px solid #ef4444; }
+      .issue-item.severity-medium { border-left: 3px solid #f59e0b; }
+      .issue-item.severity-low { border-left: 3px solid #10b981; }
+      .issue-case { font-weight: 600; color: #374151; }
+      .issue-desc { color: #6b7280; margin-top: 4px; }
+      .issue-suggestion { color: #059669; margin-top: 4px; font-style: italic; }
+      .loading { display: none; align-items: center; gap: 8px; color: #6b7280; font-size: 14px; }
+      .loading.active { display: flex; }
+      .spinner {
+        width: 20px; height: 20px;
+        border: 2px solid #e5e7eb;
+        border-top-color: #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .tips { margin-top: 12px; font-size: 12px; color: #9ca3af; }
+      .llm-status { font-size: 12px; color: #9ca3af; margin-top: 8px; }
+      .llm-status.available { color: #10b981; }
+      .llm-status.unavailable { color: #f59e0b; }
+      .llm-status.unavailable a { color: #667eea; }
+    </style>
+  </head>
+  <body>
+    <div class="chat-container">
+      <div class="chat-header">
+        <h1>测试用例生成助手</h1>
+        <span class="subtitle">智能生成 + 用例评审 + 自动修复</span>
+      </div>
+
+      <div class="chat-body" id="chatBody">
+        <div class="message bot">
+          <div class="avatar bot">🤖</div>
+          <div class="message-content">
+            欢迎使用智能测试用例生成工具！支持<strong>智能生成</strong>（LLM语义分析）、<strong>用例评审</strong>和<strong>自动修复</strong>。请输入需求描述或上传文档/截图。
+          </div>
+        </div>
+
+        {% if error %}
+        <div class="message bot">
+          <div class="avatar bot">🤖</div>
+          <div class="message-content result-area error">
+            <div class="result-title">生成失败</div>
+            <div>{{ error }}</div>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if success %}
+        <div class="message bot">
+          <div class="avatar bot">🤖</div>
+          <div class="message-content result-area">
+            <div class="result-title">{{ success }}</div>
+            <div class="download-links">
+              {% for item in downloads %}
+              <a class="download-link" href="{{ item.url }}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                {{ item.name }}
+              </a>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if review_result %}
+        <div class="message bot">
+          <div class="avatar bot">🔍</div>
+          <div class="message-content review-area">
+            <div class="review-title">用例评审报告</div>
+            <div class="review-stats">
+              <div class="stat-item">
+                <span class="stat-label">综合评分</span>
+                <span class="stat-value">{{ review_result.overall_score }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">重复用例</span>
+                <span class="stat-value">{{ review_result.redundant_cases_count }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">缺失场景</span>
+                <span class="stat-value">{{ review_result.missing_scenarios_count }}</span>
+              </div>
+            </div>
+            {% if review_result.issues %}
+            <div class="review-issues">
+              {% for issue in review_result.issues[:10] %}
+              <div class="issue-item severity-{{ issue.severity }}">
+                <span class="issue-case">{{ issue.case_id }}</span>
+                <span class="issue-desc">{{ issue.description }}</span>
+                <span class="issue-suggestion">建议：{{ issue.suggestion }}</span>
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+            {% if review_result.improvement_suggestions %}
+            <div style="margin-top: 12px; font-size: 13px; color: #6b7280;">
+              <strong>改进建议：</strong>
+              <ul style="margin: 8px 0 0 16px;">
+                {% for suggestion in review_result.improvement_suggestions[:5] %}
+                <li>{{ suggestion }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <form method="post" action="/generate" enctype="multipart/form-data" id="mainForm">
+        <div class="input-area">
+          <div class="input-wrapper">
+            <div class="text-input-container">
+              <textarea
+                class="text-input"
+                name="requirement_text"
+                id="requirementText"
+                placeholder="请输入需求描述，可直接 Ctrl+V 粘贴产品截图...例如：登录页面需要支持账号密码登录、验证码登录、第三方登录..."
+                rows="3"
+              >{{ requirement_text if requirement_text else '' }}</textarea>
+              <div style="font-size: 12px; color: #9ca3af; margin-top: 4px;">
+                💡 提示：可在上方文本框直接粘贴截图，图片会自动添加到下方预览区
+              </div>
+
+              <div class="file-upload-area">
+                <label class="upload-btn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                  </svg>
+                  上传文档
+                  <input type="file" name="requirement_files" class="file-input" id="docInput" multiple accept=".txt,.md,.markdown,.docx,.pdf,.csv,.xlsx,.xlsm,.json" onchange="handleFiles(this, 'doc')">
+                </label>
+                <label class="upload-btn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                  </svg>
+                  上传图片
+                  <input type="file" name="image_files" class="file-input" id="imgInput" multiple accept=".png,.jpg,.jpeg,.bmp,.webp,.tiff" onchange="handleFiles(this, 'img')">
+                </label>
+                <div class="loading" id="loading">
+                  <div class="spinner"></div>
+                  <span>正在生成...</span>
+                </div>
+              </div>
+
+              <div class="preview-area" id="previewArea"></div>
+
+              <div class="settings-row">
+                <div class="setting-item">
+                  <label>生成模式</label>
+                  <select name="generation_mode" id="generationMode">
+                    <option value="smart" {% if generation_mode == 'smart' %}selected{% endif %}>智能生成 (LLM)</option>
+                    <option value="template" {% if generation_mode == 'template' %}selected{% endif %}>模板生成</option>
+                  </select>
+                </div>
+                <div class="setting-item">
+                  <label>启用评审</label>
+                  <input type="checkbox" name="enable_review" id="enableReview" checked>
+                </div>
+                <div class="setting-item">
+                  <label>自动修复</label>
+                  <input type="checkbox" name="enable_auto_fix" id="enableAutoFix" checked>
+                </div>
+                <div class="setting-item">
+                  <label>输出格式</label>
+                  <select name="output_format">
+                    <option value="excel+word">Excel + Word</option>
+                    <option value="excel">仅 Excel</option>
+                    <option value="csv">仅 CSV</option>
+                    <option value="word">仅 Word</option>
+                  </select>
+                </div>
+                <div class="setting-item">
+                  <label>最少用例数</label>
+                  <input type="number" name="min_cases" min="1" value="100" style="width: 80px;">
+                </div>
+              </div>
+
+              <div class="llm-status {% if llm_available %}available{% else %}unavailable{% endif %}">
+                {% if llm_available %}
+                ✅ LLM已配置，可使用智能生成
+                {% else %}
+                ⚠️ LLM未配置，请设置环境变量 <code>LLM_API_KEY</code>（<a href="https://platform.deepseek.com/api_keys" target="_blank">获取DeepSeek API Key</a>）
+                {% endif %}
+              </div>
+            </div>
+
+            <button class="submit-btn" type="submit" id="submitBtn">生成用例</button>
+          </div>
+
+          <div class="tips">
+            支持：需求文档（txt/md/docx/pdf/xlsx）和界面截图（png/jpg）。智能生成模式下，LLM会分析需求语义并生成针对性用例。
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <script>
+      const previewArea = document.getElementById('previewArea');
+      const submitBtn = document.getElementById('submitBtn');
+      const loading = document.getElementById('loading');
+      const mainForm = document.getElementById('mainForm');
+      const requirementText = document.getElementById('requirementText');
+      const generationMode = document.getElementById('generationMode');
+      const enableReview = document.getElementById('enableReview');
+      const enableAutoFix = document.getElementById('enableAutoFix');
+
+      let uploadedFiles = [];
+
+      requirementText.addEventListener('paste', function(e) {
+        const items = e.clipboardData.items;
+        for (let item of items) {
+          if (item.type.startsWith('image/')) {
+            e.preventDefault();
+            const file = item.getAsFile();
+            addPastedImage(file);
+          }
+        }
+      });
+
+      function addPastedImage(file) {
+        const id = Date.now() + Math.random();
+        uploadedFiles.push({ id, file, type: 'img' });
+
+        const item = document.createElement('div');
+        item.className = 'preview-item image';
+        item.dataset.id = id;
+
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        item.appendChild(img);
+
+        const removeBtn = document.createElement('span');
+        removeBtn.className = 'remove-btn';
+        removeBtn.innerHTML = '×';
+        removeBtn.onclick = function() {
+          uploadedFiles = uploadedFiles.filter(f => f.id !== id);
+          item.remove();
+        };
+        item.appendChild(removeBtn);
+
+        previewArea.appendChild(item);
+      }
+
+      function handleFiles(input, type) {
+        const files = input.files;
+        for (let file of files) {
+          const id = Date.now() + Math.random();
+          uploadedFiles.push({ id, file, type });
+
+          const item = document.createElement('div');
+          item.className = 'preview-item ' + (type === 'img' ? 'image' : 'file');
+          item.dataset.id = id;
+
+          if (type === 'img') {
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(file);
+            item.appendChild(img);
+          } else {
+            item.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>' + file.name;
+          }
+
+          const removeBtn = document.createElement('span');
+          removeBtn.className = 'remove-btn';
+          removeBtn.innerHTML = '×';
+          removeBtn.onclick = function() {
+            uploadedFiles = uploadedFiles.filter(f => f.id !== id);
+            item.remove();
+          };
+          item.appendChild(removeBtn);
+
+          previewArea.appendChild(item);
+        }
+        input.value = '';
+      }
+
+      mainForm.onsubmit = function(e) {
+        e.preventDefault();
+        submitBtn.disabled = true;
+        loading.classList.add('active');
+
+        const formData = new FormData();
+
+        formData.append('requirement_text', requirementText.value);
+
+        formData.append('generation_mode', generationMode.value);
+        formData.append('enable_review', enableReview.checked ? 'on' : 'off');
+        formData.append('enable_auto_fix', enableAutoFix.checked ? 'on' : 'off');
+
+        const outputFormat = mainForm.querySelector('select[name="output_format"]').value;
+        const minCases = mainForm.querySelector('input[name="min_cases"]').value;
+        formData.append('output_format', outputFormat);
+        formData.append('min_cases', minCases);
+
+        const docInput = document.getElementById('docInput');
+        if (docInput.files.length > 0) {
+          for (let file of docInput.files) {
+            formData.append('requirement_files', file);
+          }
+        }
+
+        const imgInput = document.getElementById('imgInput');
+        if (imgInput.files.length > 0) {
+          for (let file of imgInput.files) {
+            formData.append('image_files', file);
+          }
+        }
+
+        uploadedFiles.forEach(function(item, index) {
+          if (item.type === 'img') {
+            formData.append('image_files', item.file, 'pasted_image_' + index + '.png');
+          } else {
+            formData.append('requirement_files', item.file);
+          }
+        });
+
+        fetch('/generate', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.text())
+        .then(html => {
+          document.open();
+          document.write(html);
+          document.close();
+        })
+        .catch(error => {
+          alert('生成失败：' + error);
+          submitBtn.disabled = false;
+          loading.classList.remove('active');
+        });
+      };
+    </script>
+  </body>
+</html>
