@@ -6,7 +6,7 @@ import uuid
 from pathlib import Path
 from zipfile import ZipFile
 
-from flask import Flask, abort, render_template, request, send_file
+from flask import Flask, abort, jsonify, render_template, request, send_file
 
 from .exporters import export_cases_to_csv, export_cases_to_excel, export_cases_to_word
 from .generators import parse_requirement_path, generate_with_llm
@@ -15,6 +15,17 @@ from .core.logging import setup_logging, get_logger
 from .core.models import ReviewResult
 from .utils.file_utils import SUPPORTED_EXTENSIONS, IMAGE_EXTENSIONS
 from .llm.config_loader import load_llm_config
+
+# 知识库服务（可选导入）
+try:
+    from .knowledge.service import get_knowledge_service
+    from .knowledge.models import Project, KnowledgeDocument
+    HAS_KNOWLEDGE = True
+except ImportError:
+    HAS_KNOWLEDGE = False
+    get_knowledge_service = None
+    Project = None
+    KnowledgeDocument = None
 
 logger = get_logger("web")
 
@@ -48,12 +59,28 @@ def validate_upload_file(file) -> tuple[bool, str]:
 def index():
     llm_config = load_llm_config()
     llm_available = llm_config.api_key is not None and len(llm_config.api_key) > 10
-    return render_template("index.html", llm_available=llm_available)
+
+    # 获取项目列表
+    projects = []
+    if HAS_KNOWLEDGE:
+        try:
+            ks = get_knowledge_service()
+            projects = ks.list_projects()
+        except Exception as e:
+            logger.warning(f"Failed to load projects: {e}")
+
+    return render_template(
+        "index.html",
+        llm_available=llm_available,
+        projects=projects,
+        has_knowledge=HAS_KNOWLEDGE,
+    )
 
 
 @app.post("/generate")
 def generate():
     requirement_text = request.form.get("requirement_text", "").strip()
+    project_id = request.form.get("project_id", "").strip()
 
     uploaded_docs = request.files.getlist("requirement_files")
     uploaded_images = request.files.getlist("image_files")
@@ -167,7 +194,13 @@ def generate():
 
     try:
         use_llm = generation_mode == "smart" and llm_config.api_key is not None
-        cases = parse_requirement_path(upload_dir, min_cases=min_cases, cfg=cfg, use_llm=use_llm)
+        cases = parse_requirement_path(
+            upload_dir,
+            min_cases=min_cases,
+            cfg=cfg,
+            use_llm=use_llm,
+            project_id=project_id,
+        )
         logger.info("Generated " + str(len(cases)) + " test cases for job " + job_id)
     except Exception as exc:
         logger.error("Failed to parse requirements: " + str(exc))
@@ -188,12 +221,13 @@ def generate():
 
     review_result = None
     fix_summary = None
+    modified_cases = []
 
     if enable_review and len(cases) > 0:
         review_result = _perform_review(cases, requirement_text, cfg, llm_env_config)
 
         if enable_auto_fix and review_result:
-            cases, fix_summary = _perform_auto_fix(
+            cases, fix_summary, modified_cases = _perform_auto_fix(
                 cases, review_result, requirement_text, cfg, llm_env_config
             )
 
@@ -229,8 +263,19 @@ def generate():
     success_msg = "已生成 " + str(len(cases)) + " 条测试用例。"
     if generation_mode == "smart":
         success_msg += "（智能生成模式）"
+    if project_id:
+        success_msg += f"（参考项目知识库）"
     if fix_summary:
         success_msg += " " + fix_summary
+
+    # 获取项目列表用于渲染
+    projects = []
+    if HAS_KNOWLEDGE:
+        try:
+            ks = get_knowledge_service()
+            projects = ks.list_projects()
+        except Exception:
+            pass
 
     return render_template(
         "index.html",
@@ -238,8 +283,12 @@ def generate():
         downloads=download_items,
         requirement_text=requirement_text,
         review_result=review_result,
+        modified_cases=modified_cases,
         generation_mode=generation_mode,
         llm_available=llm_available,
+        projects=projects,
+        has_knowledge=HAS_KNOWLEDGE,
+        selected_project_id=project_id,
     )
 
 
@@ -286,7 +335,7 @@ def _perform_auto_fix(
     requirement_context: str,
     cfg: GenerationConfig,
     llm_env_config,
-) -> tuple[list, str]:
+) -> tuple[list, str, list]:
     """执行自动修复"""
     from .llm.client import LLMClient, LLMConfig
     from .review.auto_fixer import AutoFixer
@@ -310,10 +359,10 @@ def _perform_auto_fix(
     try:
         fixed_result = fixer.apply_fixes(cases, review_result, requirement_context, module_name)
         logger.info(f"Auto-fix completed: {fixed_result.fix_summary}")
-        return fixed_result.cases, fixed_result.fix_summary
+        return fixed_result.cases, fixed_result.fix_summary, fixed_result.modified_cases
     except Exception as e:
         logger.error(f"Auto-fix failed: {e}")
-        return cases, ""
+        return cases, "", []
 
 
 @app.get("/download/<job_id>/<filename>")
@@ -325,6 +374,164 @@ def download(job_id: str, filename: str):
     if not target.exists() or not target.is_file():
         abort(404)
     return send_file(target, as_attachment=True, download_name=safe_filename)
+
+
+# ========== 知识库 API ==========
+
+@app.get("/api/projects")
+def api_list_projects():
+    """获取项目列表"""
+    if not HAS_KNOWLEDGE:
+        return jsonify({"error": "知识库功能未启用"}), 400
+
+    try:
+        ks = get_knowledge_service()
+        projects = ks.list_projects()
+        return jsonify({
+            "projects": [
+                {
+                    "project_id": p.project_id,
+                    "name": p.name,
+                    "description": p.description,
+                    "created_at": p.created_at,
+                    "document_count": p.document_count,
+                }
+                for p in projects
+            ]
+        })
+    except Exception as e:
+        logger.error(f"Failed to list projects: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.post("/api/projects")
+def api_create_project():
+    """创建项目"""
+    if not HAS_KNOWLEDGE:
+        return jsonify({"error": "知识库功能未启用"}), 400
+
+    data = request.get_json() or {}
+    name = data.get("name", "").strip()
+    description = data.get("description", "").strip()
+
+    if not name:
+        return jsonify({"error": "项目名称不能为空"}), 400
+
+    try:
+        ks = get_knowledge_service()
+        project = ks.create_project(name, description)
+        return jsonify({
+            "project": {
+                "project_id": project.project_id,
+                "name": project.name,
+                "description": project.description,
+                "created_at": project.created_at,
+                "document_count": project.document_count,
+            }
+        })
+    except Exception as e:
+        logger.error(f"Failed to create project: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.get("/api/projects/<project_id>/documents")
+def api_list_documents(project_id: str):
+    """获取项目文档列表"""
+    if not HAS_KNOWLEDGE:
+        return jsonify({"error": "知识库功能未启用"}), 400
+
+    try:
+        ks = get_knowledge_service()
+        docs = ks.list_documents(project_id)
+        return jsonify({
+            "documents": [
+                {
+                    "doc_id": d.doc_id,
+                    "filename": d.filename,
+                    "doc_type": d.doc_type,
+                    "upload_time": d.upload_time,
+                    "chunk_count": d.chunk_count,
+                }
+                for d in docs
+            ]
+        })
+    except Exception as e:
+        logger.error(f"Failed to list documents: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.post("/api/projects/<project_id>/documents")
+def api_add_document(project_id: str):
+    """上传文档到项目"""
+    if not HAS_KNOWLEDGE:
+        return jsonify({"error": "知识库功能未启用"}), 400
+
+    if "file" not in request.files:
+        return jsonify({"error": "未上传文件"}), 400
+
+    file = request.files["file"]
+    if not file.filename:
+        return jsonify({"error": "文件名无效"}), 400
+
+    doc_type = request.form.get("doc_type", "other")
+
+    # 保存临时文件
+    temp_dir = UPLOAD_ROOT / "knowledge_temp"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    temp_file = temp_dir / _safe_name(file.filename)
+    file.save(str(temp_file))
+
+    try:
+        ks = get_knowledge_service()
+        doc = ks.add_document(project_id, temp_file, doc_type)
+        if doc:
+            return jsonify({
+                "document": {
+                    "doc_id": doc.doc_id,
+                    "filename": doc.filename,
+                    "doc_type": doc.doc_type,
+                    "chunk_count": doc.chunk_count,
+                }
+            })
+        else:
+            return jsonify({"error": "添加文档失败"}), 500
+    except Exception as e:
+        logger.error(f"Failed to add document: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        # 清理临时文件
+        if temp_file.exists():
+            temp_file.unlink()
+
+
+@app.delete("/api/projects/<project_id>/documents/<doc_id>")
+def api_delete_document(project_id: str, doc_id: str):
+    """删除文档"""
+    if not HAS_KNOWLEDGE:
+        return jsonify({"error": "知识库功能未启用"}), 400
+
+    try:
+        ks = get_knowledge_service()
+        success = ks.delete_document(project_id, doc_id)
+        return jsonify({"success": success})
+    except Exception as e:
+        logger.error(f"Failed to delete document: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.delete("/api/projects/<project_id>")
+def api_delete_project(project_id: str):
+    """删除项目"""
+    if not HAS_KNOWLEDGE:
+        return jsonify({"error": "知识库功能未启用"}), 400
+
+    try:
+        ks = get_knowledge_service()
+        success = ks.delete_project(project_id)
+        return jsonify({"success": success})
+    except Exception as e:
+        logger.error(f"Failed to delete project: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 def main() -> None:

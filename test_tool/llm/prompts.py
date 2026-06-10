@@ -53,6 +53,17 @@ SYSTEM_PROMPT_CASE_REVIEW = """你是一名资深测试评审专家，负责评�
 输出格式：评审结果JSON，包含评分和改进建议"""
 
 
+SYSTEM_PROMPT_CASE_FIX = """你是一名专业的测试用例修复专家，负责根据评审意见改进测试用例。
+
+修复原则：
+1. 保持用例的核心测试目的不变
+2. 根据评审建议针对性地修改问题内容
+3. 修改后的内容应具体、明确、可执行、可验证
+4. 遵循测试用例编写规范
+
+输出格式：严格遵循JSON格式输出，确保结构正确。"""
+
+
 class PromptManager:
     """Prompt模板管理器"""
 
@@ -101,6 +112,7 @@ class PromptManager:
 【测试点】: {test_point}
 【测试维度】: {dimensions}
 【需求上下文】: {requirement_context}
+{knowledge_context}
 【系统配置】:
 - 系统名称: {system_name}
 - 管理员账号: {admin_user}
@@ -136,6 +148,7 @@ class PromptManager:
 - test_process步骤应具体明确，避免过于笼统
 - 每个测试点生成2-5个用例，覆盖不同维度
 - 避免生成重复或相似的用例
+- 如果有知识库参考内容，请参考历史文档的风格和模式生成用例
 """,
         expected_output_format="json"
     )
@@ -219,6 +232,95 @@ issue_type可选值：redundant_case, missing_scenario, vague_step, unverifiable
         expected_output_format="json"
     )
 
+    FIX_VAGUE_STEP = PromptTemplate(
+        name="fix_vague_step",
+        system_prompt=SYSTEM_PROMPT_CASE_FIX,
+        user_prompt_template="""
+请根据评审意见修改以下测试用例的步骤描述，使其更具体、更可执行：
+
+【用例ID】: {case_id}
+【用例名称】: {case_name}
+【模块名称】: {module_name}
+【原测试步骤】:
+{original_process}
+
+【问题描述】: {description}
+【修改建议】: {suggestion}
+
+【需求上下文】: {requirement_context}
+
+请输出修改后的测试步骤（JSON格式）：
+{{
+  "test_process": [
+    "步骤1：具体的操作描述",
+    "步骤2：具体的操作描述"
+  ],
+  "modification_summary": "简要描述修改内容"
+}}
+""",
+        expected_output_format="json"
+    )
+
+    FIX_UNVERIFIABLE_RESULT = PromptTemplate(
+        name="fix_unverifiable_result",
+        system_prompt=SYSTEM_PROMPT_CASE_FIX,
+        user_prompt_template="""
+请根据评审意见修改以下测试用例的预期结果，使其可验证、有明确的检查点：
+
+【用例ID】: {case_id}
+【用例名称】: {case_name}
+【模块名称】: {module_name}
+【原预期结果】:
+{original_result}
+
+【测试步骤】: {test_process}
+【问题描述】: {description}
+【修改建议】: {suggestion}
+
+【需求上下文】: {requirement_context}
+
+请输出修改后的预期结果（JSON格式）：
+{{
+  "expected_result": [
+    "预期结果1：具体的验证点",
+    "预期结果2：具体的验证点"
+  ],
+  "modification_summary": "简要描述修改内容"
+}}
+""",
+        expected_output_format="json"
+    )
+
+    FIX_INCORRECT_PRECONDITION = PromptTemplate(
+        name="fix_incorrect_precondition",
+        system_prompt=SYSTEM_PROMPT_CASE_FIX,
+        user_prompt_template="""
+请根据评审意见修改以下测试用例的预置条件，使其正确、完整：
+
+【用例ID】: {case_id}
+【用例名称】: {case_name}
+【模块名称】: {module_name}
+【原预置条件】:
+{original_preconditions}
+
+【测试步骤】: {test_process}
+【问题描述】: {description}
+【修改建议】: {suggestion}
+
+【需求上下文】: {requirement_context}
+
+请输出修改后的预置条件（JSON格式）：
+{{
+  "preconditions": [
+    "前置条件1：具体的环境或数据准备要求",
+    "前置条件2：具体的账号或权限要求"
+  ],
+  "modification_summary": "简要描述修改内容"
+}}
+""",
+        expected_output_format="json"
+    )
+
     def get_template(self, name: str) -> PromptTemplate:
         """获取模板"""
         templates = {
@@ -226,6 +328,9 @@ issue_type可选值：redundant_case, missing_scenario, vague_step, unverifiable
             "generate_test_cases": self.GENERATE_TEST_CASES,
             "review_test_cases": self.REVIEW_TEST_CASES,
             "supplement_missing_scenarios": self.SUPPLEMENT_MISSING_SCENARIOS,
+            "fix_vague_step": self.FIX_VAGUE_STEP,
+            "fix_unverifiable_result": self.FIX_UNVERIFIABLE_RESULT,
+            "fix_incorrect_precondition": self.FIX_INCORRECT_PRECONDITION,
         }
         return templates[name]
 
@@ -246,6 +351,17 @@ issue_type可选值：redundant_case, missing_scenario, vague_step, unverifiable
             "cases_content": "",
             "existing_cases_count": 0,
             "missing_scenarios": "",
+            "knowledge_context": "",  # 知识库上下文
+            # 修复模板的默认参数
+            "case_id": "",
+            "case_name": "",
+            "module_name": "",
+            "original_process": "",
+            "original_result": "",
+            "original_preconditions": "",
+            "test_process": "",
+            "description": "",
+            "suggestion": "",
         }
 
         full_kwargs = {**defaults, **kwargs}

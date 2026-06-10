@@ -240,13 +240,243 @@
       .llm-status.available { color: #10b981; }
       .llm-status.unavailable { color: #f59e0b; }
       .llm-status.unavailable a { color: #667eea; }
+      .kb-btn {
+        background: transparent;
+        border: 1px solid rgba(255,255,255,0.5);
+        border-radius: 8px;
+        padding: 6px 10px;
+        color: #fff;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        transition: all 0.2s;
+        margin-left: auto;
+      }
+      .kb-btn:hover { background: rgba(255,255,255,0.1); border-color: #fff; }
+      .kb-modal {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+      }
+      .kb-modal.active { display: flex; }
+      .kb-modal-content {
+        background: #fff;
+        border-radius: 16px;
+        width: 90%;
+        max-width: 600px;
+        max-height: 80vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      .kb-modal-header {
+        padding: 16px 20px;
+        background: #f3f4f6;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .kb-modal-header h2 { margin: 0; font-size: 18px; }
+      .kb-modal-close {
+        background: transparent;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: #6b7280;
+      }
+      .kb-modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+      .kb-project-list { margin-bottom: 16px; }
+      .kb-project-item {
+        padding: 12px 16px;
+        background: #f9fafb;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .kb-project-name { font-weight: 600; color: #374151; }
+      .kb-project-docs { font-size: 12px; color: #6b7280; }
+      .kb-project-actions { display: flex; gap: 8px; }
+      .kb-project-actions button {
+        padding: 4px 8px;
+        font-size: 12px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .kb-btn-view { background: #dbeafe; border: 1px solid #3b82f6; color: #3b82f6; }
+      .kb-btn-delete { background: #fee2e2; border: 1px solid #ef4444; color: #ef4444; }
+      .kb-add-project {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+      .kb-add-project input {
+        flex: 1;
+        padding: 8px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+      }
+      .kb-add-project button {
+        padding: 8px 16px;
+        background: #667eea;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .kb-doc-section { margin-top: 16px; }
+      .kb-doc-list { margin-top: 8px; }
+      .kb-doc-item {
+        padding: 8px 12px;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        margin-bottom: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .kb-doc-name { font-size: 13px; color: #374151; }
+      .kb-doc-type { font-size: 11px; padding: 2px 6px; background: #e5e7eb; border-radius: 4px; }
+      .kb-upload-area {
+        margin-top: 16px;
+        padding: 16px;
+        border: 2px dashed #d1d5db;
+        border-radius: 8px;
+        text-align: center;
+      }
+      .kb-upload-area input { display: none; }
+      .kb-upload-area label {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        background: #f3f4f6;
+        border-radius: 6px;
+        cursor: pointer;
+        color: #374151;
+      }
+      .kb-doc-select {
+        margin-top: 8px;
+        padding: 6px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+      }
+      .modifications-area {
+        padding: 20px;
+        background: #f0f9ff;
+        border-radius: 12px;
+        margin-top: 16px;
+      }
+      .modifications-title {
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        color: #0369a1;
+      }
+      .modifications-stats {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 12px;
+      }
+      .modifications-list {
+        margin-top: 12px;
+      }
+      .modification-item {
+        padding: 12px;
+        background: #fff;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        border: 1px solid #e0f2fe;
+      }
+      .mod-header {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .mod-case-id {
+        font-weight: 600;
+        color: #374151;
+      }
+      .mod-type {
+        font-size: 12px;
+        padding: 2px 8px;
+        background: #dbeafe;
+        color: #1e40af;
+        border-radius: 4px;
+      }
+      .mod-summary {
+        font-size: 13px;
+        color: #6b7280;
+      }
+      .mod-details {
+        margin-top: 8px;
+      }
+      .mod-details summary {
+        cursor: pointer;
+        color: #0369a1;
+        font-size: 13px;
+      }
+      .diff-view {
+        margin-top: 8px;
+        padding: 8px;
+        background: #f8fafc;
+        border-radius: 6px;
+      }
+      .diff-section {
+        margin-bottom: 8px;
+      }
+      .diff-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 4px;
+      }
+      .diff-original, .diff-modified {
+        padding: 8px;
+        border-radius: 6px;
+        margin-bottom: 4px;
+      }
+      .diff-original {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+      }
+      .diff-modified {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+      }
+      .diff-tag {
+        font-size: 11px;
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+      .original-tag { color: #dc2626; }
+      .modified-tag { color: #16a34a; }
+      .diff-content {
+        font-size: 13px;
+        color: #374151;
+        white-space: pre-wrap;
+      }
     </style>
   </head>
   <body>
     <div class="chat-container">
       <div class="chat-header">
         <h1>测试用例生成助手</h1>
-        <span class="subtitle">智能生成 + 用例评审 + 自动修复</span>
+        <span class="subtitle">智能生成 + 用例评审 + 自动修复 + 知识库</span>
+        <button class="kb-btn" onclick="showKnowledgeModal()" title="知识库管理">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-17A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
+        </button>
       </div>
 
       <div class="chat-body" id="chatBody">
@@ -331,6 +561,74 @@
           </div>
         </div>
         {% endif %}
+
+        {% if modified_cases %}
+        <div class="message bot">
+          <div class="avatar bot">🔧</div>
+          <div class="message-content modifications-area">
+            <div class="modifications-title">用例修改详情</div>
+            <div class="modifications-stats">
+              <div class="stat-item">
+                <span class="stat-label">修改用例数</span>
+                <span class="stat-value">{{ modified_cases|length }}</span>
+              </div>
+            </div>
+            <div class="modifications-list">
+              {% for mod in modified_cases %}
+              <div class="modification-item">
+                <div class="mod-header">
+                  <span class="mod-case-id">{{ mod.case_id }}</span>
+                  <span class="mod-type">{{ mod.modification_type }}</span>
+                </div>
+                <div class="mod-summary">{{ mod.modification_summary }}</div>
+                <details class="mod-details">
+                  <summary>查看变更对比</summary>
+                  <div class="diff-view">
+                    {% if mod.modification_type == 'vague_step' %}
+                    <div class="diff-section">
+                      <div class="diff-label">测试步骤</div>
+                      <div class="diff-original">
+                        <div class="diff-tag original-tag">原内容</div>
+                        <div class="diff-content">{{ mod.original_case.test_process }}</div>
+                      </div>
+                      <div class="diff-modified">
+                        <div class="diff-tag modified-tag">修改后</div>
+                        <div class="diff-content">{{ mod.modified_case.test_process }}</div>
+                      </div>
+                    </div>
+                    {% elif mod.modification_type == 'unverifiable_result' %}
+                    <div class="diff-section">
+                      <div class="diff-label">预期结果</div>
+                      <div class="diff-original">
+                        <div class="diff-tag original-tag">原内容</div>
+                        <div class="diff-content">{{ mod.original_case.expected_result }}</div>
+                      </div>
+                      <div class="diff-modified">
+                        <div class="diff-tag modified-tag">修改后</div>
+                        <div class="diff-content">{{ mod.modified_case.expected_result }}</div>
+                      </div>
+                    </div>
+                    {% elif mod.modification_type == 'incorrect_precondition' %}
+                    <div class="diff-section">
+                      <div class="diff-label">预置条件</div>
+                      <div class="diff-original">
+                        <div class="diff-tag original-tag">原内容</div>
+                        <div class="diff-content">{{ mod.original_case.preconditions }}</div>
+                      </div>
+                      <div class="diff-modified">
+                        <div class="diff-tag modified-tag">修改后</div>
+                        <div class="diff-content">{{ mod.modified_case.preconditions }}</div>
+                      </div>
+                    </div>
+                    {% endif %}
+                  </div>
+                </details>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        {% endif %}
       </div>
 
       <form method="post" action="/generate" enctype="multipart/form-data" id="mainForm">
@@ -376,6 +674,19 @@
               <div class="preview-area" id="previewArea"></div>
 
               <div class="settings-row">
+                {% if has_knowledge %}
+                <div class="setting-item">
+                  <label>参考项目</label>
+                  <select name="project_id" id="projectSelect">
+                    <option value="">不使用知识库</option>
+                    {% for project in projects %}
+                    <option value="{{ project.project_id }}" {% if selected_project_id == project.project_id %}selected{% endif %}>
+                      {{ project.name }} ({{ project.document_count }}文档)
+                    </option>
+                    {% endfor %}
+                  </select>
+                </div>
+                {% endif %}
                 <div class="setting-item">
                   <label>生成模式</label>
                   <select name="generation_mode" id="generationMode">
@@ -423,10 +734,48 @@
           </div>
         </div>
       </form>
+
+    <!-- 知识库管理弹窗 -->
+    <div class="kb-modal" id="kbModal">
+      <div class="kb-modal-content">
+        <div class="kb-modal-header">
+          <h2>📚 知识库管理</h2>
+          <button class="kb-modal-close" onclick="hideKnowledgeModal()">×</button>
+        </div>
+        <div class="kb-modal-body">
+          <div class="kb-add-project">
+            <input type="text" id="newProjectName" placeholder="新项目名称">
+            <button onclick="createProject()">创建项目</button>
+          </div>
+          <div class="kb-project-list" id="kbProjectList">
+            <!-- 项目列表将通过 JS 加载 -->
+          </div>
+          <div class="kb-doc-section" id="kbDocSection" style="display:none;">
+            <h3 id="kbDocTitle">文档列表</h3>
+            <div class="kb-upload-area">
+              <input type="file" id="kbFileInput" accept=".txt,.md,.docx,.pdf,.xlsx,.xls,.csv,.json">
+              <label for="kbFileInput">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                上传文档
+              </label>
+              <select class="kb-doc-select" id="kbDocType">
+                <option value="requirement">需求文档</option>
+                <option value="design">设计文档</option>
+                <option value="test_case">历史用例</option>
+                <option value="other">其他</option>
+              </select>
+            </div>
+            <div class="kb-doc-list" id="kbDocList"></div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script>
-      const previewArea = document.getElementById('previewArea');
       const submitBtn = document.getElementById('submitBtn');
       const loading = document.getElementById('loading');
       const mainForm = document.getElementById('mainForm');
@@ -560,6 +909,148 @@
           loading.classList.remove('active');
         });
       };
+
+      // ========== 知识库管理函数 ==========
+      let currentProjectId = '';
+
+      function showKnowledgeModal() {
+        document.getElementById('kbModal').classList.add('active');
+        loadProjects();
+      }
+
+      function hideKnowledgeModal() {
+        document.getElementById('kbModal').classList.remove('active');
+      }
+
+      function loadProjects() {
+        fetch('/api/projects')
+          .then(res => res.json())
+          .then(data => {
+            const list = document.getElementById('kbProjectList');
+            list.innerHTML = '';
+            if (data.projects && data.projects.length > 0) {
+              data.projects.forEach(p => {
+                list.innerHTML += `
+                  <div class="kb-project-item">
+                    <div>
+                      <div class="kb-project-name">${p.name}</div>
+                      <div class="kb-project-docs">${p.document_count} 个文档</div>
+                    </div>
+                    <div class="kb-project-actions">
+                      <button class="kb-btn-view" onclick="viewProject('${p.project_id}', '${p.name}')">查看</button>
+                      <button class="kb-btn-delete" onclick="deleteProject('${p.project_id}')">删除</button>
+                    </div>
+                  </div>
+                `;
+              });
+            } else {
+              list.innerHTML = '<p style="color:#6b7280;">暂无项目，请创建新项目</p>';
+            }
+          })
+          .catch(err => console.error('加载项目失败:', err));
+      }
+
+      function createProject() {
+        const name = document.getElementById('newProjectName').value.trim();
+        if (!name) return alert('请输入项目名称');
+
+        fetch('/api/projects', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({name})
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.project) {
+            document.getElementById('newProjectName').value = '';
+            loadProjects();
+          } else {
+            alert('创建失败: ' + (data.error || '未知错误'));
+          }
+        })
+        .catch(err => alert('创建失败: ' + err));
+      }
+
+      function viewProject(projectId, projectName) {
+        currentProjectId = projectId;
+        document.getElementById('kbDocTitle').textContent = projectName + ' - 文档列表';
+        document.getElementById('kbDocSection').style.display = 'block';
+        loadDocuments(projectId);
+      }
+
+      function loadDocuments(projectId) {
+        fetch(`/api/projects/${projectId}/documents`)
+          .then(res => res.json())
+          .then(data => {
+            const list = document.getElementById('kbDocList');
+            list.innerHTML = '';
+            if (data.documents && data.documents.length > 0) {
+              data.documents.forEach(d => {
+                list.innerHTML += `
+                  <div class="kb-doc-item">
+                    <div>
+                      <span class="kb-doc-name">${d.filename}</span>
+                      <span class="kb-doc-type">${d.doc_type}</span>
+                    </div>
+                    <button class="kb-btn-delete" onclick="deleteDocument('${projectId}', '${d.doc_id}')">删除</button>
+                  </div>
+                `;
+              });
+            } else {
+              list.innerHTML = '<p style="color:#6b7280;">暂无文档</p>';
+            }
+          })
+          .catch(err => console.error('加载文档失败:', err));
+      }
+
+      document.getElementById('kbFileInput').addEventListener('change', function(e) {
+        if (!currentProjectId) return alert('请先选择项目');
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const docType = document.getElementById('kbDocType').value;
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('doc_type', docType);
+
+        fetch(`/api/projects/${currentProjectId}/documents`, {
+          method: 'POST',
+          body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.document) {
+            loadDocuments(currentProjectId);
+            e.target.value = '';
+          } else {
+            alert('上传失败: ' + (data.error || '未知错误'));
+          }
+        })
+        .catch(err => alert('上传失败: ' + err));
+      });
+
+      function deleteProject(projectId) {
+        if (!confirm('确定删除该项目及其所有文档？')) return;
+        fetch(`/api/projects/${projectId}`, {method: 'DELETE'})
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              loadProjects();
+              document.getElementById('kbDocSection').style.display = 'none';
+            }
+          })
+          .catch(err => alert('删除失败: ' + err));
+      }
+
+      function deleteDocument(projectId, docId) {
+        if (!confirm('确定删除该文档？')) return;
+        fetch(`/api/projects/${projectId}/documents/${docId}`, {method: 'DELETE'})
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) loadDocuments(projectId);
+          })
+          .catch(err => alert('删除失败: ' + err));
+      }
     </script>
   </body>
 </html>

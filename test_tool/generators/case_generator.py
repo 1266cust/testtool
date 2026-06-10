@@ -606,6 +606,7 @@ def parse_requirement_path(
     min_cases: int = 300,
     cfg: Optional[GenerationConfig] = None,
     use_llm: bool = False,
+    project_id: str = "",
 ) -> List[TestCase]:
     """解析需求路径，生成测试用例。
 
@@ -614,11 +615,12 @@ def parse_requirement_path(
         min_cases: 最少用例数（仅在模板模式下使用）
         cfg: 生成配置
         use_llm: 是否使用LLM智能生成
+        project_id: 项目ID（用于知识库检索）
     """
     effective_cfg = cfg or GenerationConfig()
 
     if use_llm and effective_cfg.llm_config.enabled and effective_cfg.llm_config.api_key:
-        return generate_with_llm(path, effective_cfg, min_cases)
+        return generate_with_llm(path, effective_cfg, min_cases, project_id)
 
     return _generate_with_template(path, min_cases, effective_cfg)
 
@@ -660,6 +662,7 @@ def generate_with_llm(
     path: Path,
     cfg: GenerationConfig,
     min_cases: int = 100,
+    project_id: str = "",
 ) -> List[TestCase]:
     """使用LLM智能生成测试用例。
 
@@ -667,6 +670,7 @@ def generate_with_llm(
         path: 需求文件或目录路径
         cfg: 生成配置（需包含LLM配置）
         min_cases: 最少用例数
+        project_id: 项目ID（用于知识库检索）
     """
     from ..llm.client import LLMClient, LLMConfig
     from ..llm.config_loader import load_llm_config_from_env
@@ -719,7 +723,7 @@ def generate_with_llm(
     logger.info(f"Analyzed {len(test_points)} test points")
 
     generator = SmartCaseGenerator(llm_client)
-    cases = generator.generate_for_all_points(test_points, all_sections, cfg, module_analyses)
+    cases = generator.generate_for_all_points(test_points, all_sections, cfg, module_analyses, project_id)
 
     if len(cases) < min_cases:
         logger.info(f"Generated {len(cases)} cases, below minimum {min_cases}")

@@ -89,6 +89,16 @@ class ReviewResult:
 
 
 @dataclass
+class ModifiedCaseRecord:
+    """记录被修改的用例"""
+    case_id: str
+    original_case: TestCase
+    modified_case: TestCase
+    modification_type: str  # vague_step / unverifiable_result / incorrect_precondition
+    modification_summary: str
+
+
+@dataclass
 class BoundingBox:
     x: int
     y: int

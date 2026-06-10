@@ -21,6 +21,7 @@ class GenerationContext:
     requirement_context: str
     system_config: GenerationConfig
     ui_context: Optional[str] = None
+    knowledge_context: str = ""  # 知识库上下文
 
 
 class SmartCaseGenerator:
@@ -29,6 +30,18 @@ class SmartCaseGenerator:
     def __init__(self, llm_client: LLMClient):
         self.llm = llm_client
         self.prompt_manager = PromptManager()
+        self._knowledge_service = None
+
+    def _get_knowledge_service(self):
+        """获取知识库服务（延迟加载）"""
+        if self._knowledge_service is None:
+            try:
+                from ..knowledge.service import get_knowledge_service
+                self._knowledge_service = get_knowledge_service()
+            except ImportError:
+                logger.warning("Knowledge service not available")
+                self._knowledge_service = None
+        return self._knowledge_service
 
     def generate_for_test_point(
         self,
@@ -44,6 +57,7 @@ class SmartCaseGenerator:
             test_point=context.test_point.point_name,
             dimensions=dimensions_str,
             requirement_context=context.requirement_context,
+            knowledge_context=context.knowledge_context,
             system_name=context.system_config.system_name,
             admin_user=context.system_config.admin_user,
             normal_user=context.system_config.normal_user,
@@ -66,6 +80,7 @@ class SmartCaseGenerator:
         sections: List[RequirementSection],
         cfg: GenerationConfig,
         module_analyses: Optional[Dict[str, ModuleAnalysis]] = None,
+        project_id: str = "",
     ) -> List[TestCase]:
         """为所有测试点生成用例"""
         all_cases: List[TestCase] = []
@@ -74,17 +89,37 @@ class SmartCaseGenerator:
         section_map = {s.title: s for s in sections}
         module_analyses = module_analyses or {}
 
+        # 获取知识库服务
+        knowledge_service = self._get_knowledge_service()
+
         for point in test_points:
             related_section = self._find_related_section(point, section_map)
             requirement_context = ""
             if related_section:
                 requirement_context = "\n".join(related_section.content)
 
+            # 检索知识库上下文
+            knowledge_context = ""
+            if knowledge_service and project_id:
+                try:
+                    # 使用测试点名称和需求上下文检索相关文档
+                    search_query = f"{point.point_name} {requirement_context[:200]}"
+                    knowledge_context = knowledge_service.get_project_context(
+                        project_id=project_id,
+                        requirement_text=search_query,
+                        top_k=3,
+                    )
+                    if knowledge_context:
+                        logger.info(f"Retrieved knowledge context for: {point.point_name}")
+                except Exception as e:
+                    logger.warning(f"Failed to retrieve knowledge: {e}")
+
             context = GenerationContext(
                 module_name=point.module_name,
                 test_point=point,
                 requirement_context=requirement_context,
                 system_config=cfg,
+                knowledge_context=knowledge_context,
             )
 
             cases = self.generate_for_test_point(context)
