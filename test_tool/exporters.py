@@ -39,6 +39,7 @@ HEADERS = [
     "测试过程",
     "预期结果",
     "用例类型",
+    "测试类型",
 ]
 
 
@@ -60,6 +61,7 @@ def export_cases_to_excel(cases: List[TestCase], path: Path) -> Path:
                 c.test_process,
                 c.expected_result,
                 c.case_type,
+                c.test_type,
             ]
         )
 
@@ -137,6 +139,7 @@ def export_cases_to_word(cases: List[TestCase], path: Path, title: str = "测试
         ("case_id", "用例ID"),
         ("name", "用例名称"),
         ("case_type", "用例类型"),
+        ("test_type", "测试类型"),
         ("acceptance_purpose", "验收目的"),
         ("preconditions", "预置条件"),
         ("test_process", "测试过程"),
@@ -193,6 +196,7 @@ def export_cases_to_csv(cases: List[TestCase], path: Path) -> Path:
             c.test_process,
             c.expected_result,
             c.case_type,
+            c.test_type,
         ]
         for c in cases
     ]

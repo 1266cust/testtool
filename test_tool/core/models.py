@@ -52,6 +52,7 @@ class TestCase:
     test_process: str
     expected_result: str
     case_type: str
+    test_type: str = ""
 
 
 @dataclass

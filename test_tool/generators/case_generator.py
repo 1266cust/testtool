@@ -68,6 +68,7 @@ def _build_case(
     process: str,
     expected: str,
     case_type: str,
+    test_type: str = "",
 ) -> TestCase:
     """构建测试用例。"""
     return TestCase(
@@ -79,6 +80,7 @@ def _build_case(
         test_process=process,
         expected_result=expected,
         case_type=case_type,
+        test_type=test_type,
     )
 
 
@@ -107,7 +109,7 @@ def sections_to_test_cases(
             # 根据操作类型生成不同场景的用例
             scenarios = _get_scenarios_for_action(action)
 
-            for scene_name, process_template, expected_template, case_type_override in scenarios:
+            for scene_name, process_template, expected_template, case_type_override, test_type in scenarios:
                 process = process_template.replace("{point}", point).replace("{module}", module_name)
                 expected = expected_template.replace("{point}", point)
 
@@ -127,14 +129,15 @@ def sections_to_test_cases(
                     process=process,
                     expected=expected,
                     case_type=ct,
+                    test_type=test_type,
                 ))
                 temp_index += 1
 
     return cases
 
 
-def _get_scenarios_for_action(action: str) -> List[Tuple[str, str, str, Optional[str]]]:
-    """根据操作类型返回测试场景。"""
+def _get_scenarios_for_action(action: str) -> List[Tuple[str, str, str, Optional[str], str]]:
+    """根据操作类型返回测试场景。返回 (scene_name, process, expected, case_type_override, test_type)"""
     # 通用场景
     common_scenarios = [
         ("正常操作",
@@ -144,7 +147,7 @@ def _get_scenarios_for_action(action: str) -> List[Tuple[str, str, str, Optional
 """ + _COMMON_VERIFY,
          """1. 操作成功完成，提示正确。
 2. 数据变更符合预期。""",
-         None),
+         None, "界面校验"),
         ("异常输入",
          """1. 进入【{module}】页面。
 2. 在{point}中输入异常数据（空值/特殊字符/超长文本）。
@@ -152,7 +155,7 @@ def _get_scenarios_for_action(action: str) -> List[Tuple[str, str, str, Optional
 """ + _COMMON_VERIFY,
          """1. 系统正确校验并给出明确提示。
 2. 不产生脏数据。""",
-         "异常测试"),
+         "异常测试", "格式校验"),
         ("边界值测试",
          """1. 进入【{module}】页面。
 2. 在{point}中输入边界值数据（最小/最大/临界值）。
@@ -160,11 +163,11 @@ def _get_scenarios_for_action(action: str) -> List[Tuple[str, str, str, Optional
 """ + _COMMON_VERIFY,
          """1. 系统正确处理边界值。
 2. 无截断或精度丢失。""",
-         "边界值测试"),
+         "边界值测试", "边界值校验"),
     ]
 
     # 根据操作类型添加特定场景
-    action_specific: List[Tuple[str, str, str, Optional[str]]] = []
+    action_specific: List[Tuple[str, str, str, Optional[str], str]] = []
 
     if action in ("新增创建", "编辑修改"):
         action_specific = [
@@ -175,7 +178,7 @@ def _get_scenarios_for_action(action: str) -> List[Tuple[str, str, str, Optional
 """ + _COMMON_VERIFY,
              """1. 系统阻止提交并提示必填字段。
 2. 提示信息明确具体。""",
-             "功能测试"),
+             "功能测试", "必填项校验"),
             ("重复提交幂等",
              """1. 进入【{module}】页面。
 2. 快速重复点击{point}按钮。
@@ -183,7 +186,7 @@ def _get_scenarios_for_action(action: str) -> List[Tuple[str, str, str, Optional
 """ + _COMMON_VERIFY,
              """1. 仅生成一条有效记录。
 2. 无重复数据产生。""",
-             "稳定性测试"),
+             "稳定性测试", "数据一致性校验"),
         ]
 
     elif action in ("删除禁用",):
@@ -195,7 +198,7 @@ def _get_scenarios_for_action(action: str) -> List[Tuple[str, str, str, Optional
 """ + _COMMON_VERIFY,
              """1. 删除前有确认提示。
 2. 删除后数据状态正确。""",
-             None),
+             None, "状态流转校验"),
             ("删除后恢复",
              """1. 进入【{module}】页面。
 2. 执行{point}删除操作。
@@ -203,7 +206,7 @@ def _get_scenarios_for_action(action: str) -> List[Tuple[str, str, str, Optional
 """ + _COMMON_VERIFY,
              """1. 删除操作符合业务规则。
 2. 恢复机制正确（如有）。""",
-             None),
+             None, "状态流转校验"),
         ]
 
     elif action in ("查询筛选",):
@@ -215,7 +218,7 @@ def _get_scenarios_for_action(action: str) -> List[Tuple[str, str, str, Optional
 """ + _COMMON_VERIFY,
              """1. 组合查询结果准确。
 2. 无遗漏或误匹配。""",
-             None),
+             None, "联动校验"),
             ("查询结果分页",
              """1. 进入【{module}】页面。
 2. 查询{point}，验证分页功能。
@@ -223,7 +226,7 @@ def _get_scenarios_for_action(action: str) -> List[Tuple[str, str, str, Optional
 """ + _COMMON_VERIFY,
              """1. 分页功能正常。
 2. 每页数据完整准确。""",
-             None),
+             None, "数据一致性校验"),
         ]
 
     elif action in ("导入导出",):
@@ -235,7 +238,7 @@ def _get_scenarios_for_action(action: str) -> List[Tuple[str, str, str, Optional
 """ + _COMMON_VERIFY,
              """1. 合法格式导入成功。
 2. 非法格式有明确提示。""",
-             None),
+             None, "格式校验"),
             ("导出数据完整性",
              """1. 进入【{module}】页面。
 2. 导出{point}数据。
@@ -243,7 +246,7 @@ def _get_scenarios_for_action(action: str) -> List[Tuple[str, str, str, Optional
 """ + _COMMON_VERIFY,
              """1. 导出文件数据完整。
 2. 格式正确可打开。""",
-             None),
+             None, "数据一致性校验"),
         ]
 
     elif action in ("登录认证",):
@@ -255,7 +258,7 @@ def _get_scenarios_for_action(action: str) -> List[Tuple[str, str, str, Optional
 """ + _COMMON_VERIFY,
              """1. 登录成功，跳转正确。
 2. 用户信息显示正确。""",
-             None),
+             None, "界面校验"),
             ("登录失败",
              """1. 打开登录页面。
 2. 使用错误账号密码执行{point}。
@@ -263,7 +266,7 @@ def _get_scenarios_for_action(action: str) -> List[Tuple[str, str, str, Optional
 """ + _COMMON_VERIFY,
              """1. 登录失败提示明确。
 2. 不跳转主页面。""",
-             None),
+             None, "格式校验"),
             ("退出登录",
              """1. 已登录状态。
 2. 执行{point}退出操作。
@@ -271,7 +274,7 @@ def _get_scenarios_for_action(action: str) -> List[Tuple[str, str, str, Optional
 """ + _COMMON_VERIFY,
              """1. 退出成功，返回登录页。
 2. 无法直接访问系统功能。""",
-             None),
+             None, "状态流转校验"),
         ]
 
     elif action in ("权限角色",):
@@ -283,7 +286,7 @@ def _get_scenarios_for_action(action: str) -> List[Tuple[str, str, str, Optional
 """ + _COMMON_VERIFY,
              """1. 无权限时正确拒绝。
 2. 提示信息友好。""",
-             "权限测试"),
+             "权限测试", "权限校验"),
             ("角色切换",
              """1. 使用不同角色账号登录。
 2. 执行{point}操作。
@@ -291,7 +294,7 @@ def _get_scenarios_for_action(action: str) -> List[Tuple[str, str, str, Optional
 """ + _COMMON_VERIFY,
              """1. 不同角色权限正确。
 2. 操作范围符合角色定义。""",
-             "权限测试"),
+             "权限测试", "权限校验"),
         ]
 
     elif action in ("支付资金",):
@@ -303,7 +306,7 @@ def _get_scenarios_for_action(action: str) -> List[Tuple[str, str, str, Optional
 """ + _COMMON_VERIFY,
              """1. 支付成功，订单状态正确。
 2. 资金流水记录准确。""",
-             None),
+             None, "状态流转校验"),
             ("支付失败处理",
              """1. 进入支付页面。
 2. 模拟支付失败场景（余额不足等）。
@@ -311,11 +314,11 @@ def _get_scenarios_for_action(action: str) -> List[Tuple[str, str, str, Optional
 """ + _COMMON_VERIFY,
              """1. 失败提示明确。
 2. 订单状态正确，无扣款。""",
-             None),
+             None, "数据一致性校验"),
         ]
 
     # 安全测试场景（对所有涉及输入/提交的操作添加）
-    security_scenarios: List[Tuple[str, str, str, Optional[str]]] = [
+    security_scenarios: List[Tuple[str, str, str, Optional[str], str]] = [
         ("XSS注入测试",
          """1. 进入【{module}】页面。
 2. 在{point}中输入恶意脚本代码（如<script>alert('xss')</script>）。
@@ -324,7 +327,7 @@ def _get_scenarios_for_action(action: str) -> List[Tuple[str, str, str, Optional
          """1. 脚本代码被正确过滤或转义。
 2. 不执行任何恶意代码。
 3. 页面正常显示，无安全漏洞。""",
-         "安全测试"),
+         "安全测试", "格式校验"),
         ("参数篡改测试",
          """1. 进入【{module}】页面。
 2. 正常填写{point}后，使用开发工具修改提交参数。
@@ -333,7 +336,7 @@ def _get_scenarios_for_action(action: str) -> List[Tuple[str, str, str, Optional
          """1. 后端正确校验参数合法性。
 2. 非法参数被拒绝或忽略。
 3. 无数据篡改风险。""",
-         "安全测试"),
+         "安全测试", "数据一致性校验"),
     ]
 
     # 特定操作的安全测试场景
@@ -347,7 +350,7 @@ def _get_scenarios_for_action(action: str) -> List[Tuple[str, str, str, Optional
             """1. SQL注入语句被正确过滤。
 2. 查询结果不泄露额外数据。
 3. 数据库无异常查询日志。""",
-            "安全测试",
+            "安全测试", "格式校验",
         ))
 
     if action in ("权限角色",):
@@ -360,7 +363,7 @@ def _get_scenarios_for_action(action: str) -> List[Tuple[str, str, str, Optional
             """1. 越权访问被正确拦截。
 2. 返回权限不足提示。
 3. 无法执行超出权限的操作。""",
-            "安全测试",
+            "安全测试", "权限校验",
         ))
 
     if action in ("导入导出",):
@@ -373,7 +376,7 @@ def _get_scenarios_for_action(action: str) -> List[Tuple[str, str, str, Optional
             """1. 敏感数据正确脱敏或加密。
 2. 导出文件不包含明文敏感信息。
 3. 符合数据安全规范。""",
-            "安全测试",
+            "安全测试", "数据一致性校验",
         ))
 
     if action in ("登录认证",):
@@ -386,7 +389,7 @@ def _get_scenarios_for_action(action: str) -> List[Tuple[str, str, str, Optional
             """1. 多次失败后触发防护机制。
 2. 账号临时锁定或强制验证码。
 3. 无法无限尝试密码。""",
-            "安全测试",
+            "安全测试", "权限校验",
         ))
 
     return common_scenarios + action_specific + security_scenarios
@@ -423,6 +426,7 @@ def generate_ui_element_test_cases(
 2. 响应行为符合产品定义。
 3. 异常情况有友好提示。""",
             case_type="功能测试",
+            test_type="界面校验",
         ))
         temp_index += 1
 
@@ -442,6 +446,7 @@ def generate_ui_element_test_cases(
 2. 禁用状态不可点击。
 3. 状态切换及时准确。""",
             case_type="功能测试",
+            test_type="状态流转校验",
         ))
         temp_index += 1
 
@@ -462,6 +467,7 @@ def generate_ui_element_test_cases(
                     expected="""1. 仅产生一条有效记录。
 2. 重复请求被正确拦截或忽略。""",
                     case_type="稳定性测试",
+                    test_type="数据一致性校验",
                 ))
                 temp_index += 1
                 break
@@ -481,6 +487,7 @@ def generate_ui_element_test_cases(
                     expected="""1. 删除前有确认提示。
 2. 删除成功，数据状态正确。""",
                     case_type="功能测试",
+                    test_type="状态流转校验",
                 ))
                 temp_index += 1
                 break
@@ -506,6 +513,7 @@ def generate_ui_element_test_cases(
 2. 非法输入有明确校验提示。
 3. 边界值处理正确。""",
             case_type="功能测试",
+            test_type="格式校验",
         ))
         temp_index += 1
 
@@ -524,6 +532,7 @@ def generate_ui_element_test_cases(
 2. 提示信息清晰明确。
 3. 填写后可正常提交。""",
             case_type="功能测试",
+            test_type="必填项校验",
         ))
         temp_index += 1
 
@@ -543,6 +552,7 @@ def generate_ui_element_test_cases(
 2. 超长输入有提示或截断。
 3. 无数据丢失或异常。""",
             case_type="边界值测试",
+            test_type="边界值校验",
         ))
         temp_index += 1
 
@@ -562,6 +572,7 @@ def generate_ui_element_test_cases(
 2. 页面不执行任何注入代码。
 3. 存储和显示时无安全风险。""",
             case_type="安全测试",
+            test_type="格式校验",
         ))
         temp_index += 1
 

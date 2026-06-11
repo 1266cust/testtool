@@ -125,6 +125,7 @@ class PromptManager:
       "case_name": "用例名称（应包含测试点+场景描述）",
       "scene_name": "测试场景（如：正常操作、异常输入、边界值测试等）",
       "case_type": "用例类型（功能测试/异常测试/边界值测试/安全测试等）",
+      "test_type": "测试类型（格式校验/联动校验/界面校验/边界值校验/必填项校验/数据一致性校验/权限校验/状态流转校验/兼容性校验等）",
       "acceptance_purpose": "验收目的",
       "preconditions": [
         "前置条件1（根据具体功能定制）",
@@ -221,6 +222,7 @@ issue_type可选值：redundant_case, missing_scenario, vague_step, unverifiable
       "case_name": "用例名称",
       "scene_name": "测试场景",
       "case_type": "用例类型",
+      "test_type": "测试类型（格式校验/联动校验/界面校验/边界值校验/必填项校验/数据一致性校验/权限校验/状态流转校验/兼容性校验等）",
       "acceptance_purpose": "验收目的",
       "preconditions": ["前置条件"],
       "test_process": ["测试步骤"],

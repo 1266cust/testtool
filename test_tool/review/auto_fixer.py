@@ -212,6 +212,7 @@ class AutoFixer:
                 ),
                 expected_result="\n".join(raw.get("expected_result", [])),
                 case_type=raw.get("case_type", "功能测试"),
+                test_type=raw.get("test_type", ""),
             )
             cases.append(case)
 
