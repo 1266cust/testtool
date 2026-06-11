@@ -145,16 +145,16 @@ class SmartCaseGenerator:
         raw_cases = result.get("cases", [])
         for raw in raw_cases:
             preconditions_list = raw.get("preconditions", [])
-            test_process_list = raw.get("test_process", [])
+            steps_list = raw.get("steps", raw.get("test_process", []))
             expected_result_list = raw.get("expected_result", [])
 
             preconditions = "\n".join(
                 f"{i+1}. {p}" for i, p in enumerate(preconditions_list)
             ) if preconditions_list else "1. 系统功能模块已部署完成。"
 
-            test_process = "\n".join(
-                f"{i+1}. {step}" for i, step in enumerate(test_process_list)
-            ) if test_process_list else "1. 进入功能页面。"
+            steps = "\n".join(
+                f"{i+1}. {step}" for i, step in enumerate(steps_list)
+            ) if steps_list else "1. 进入功能页面。"
 
             expected_result = "\n".join(expected_result_list) if expected_result_list else "操作成功完成。"
 
@@ -164,10 +164,10 @@ class SmartCaseGenerator:
                 name=raw.get("case_name", f"{context.test_point.point_name}测试"),
                 acceptance_purpose=raw.get("acceptance_purpose", f"验证{context.test_point.point_name}功能正确。"),
                 preconditions=preconditions,
-                test_process=test_process,
+                steps=steps,
                 expected_result=expected_result,
                 case_type=raw.get("case_type", "功能测试"),
-                test_type=raw.get("test_type", ""),
+                priority=raw.get("priority", context.test_point.priority),
             )
             cases.append(case)
 
@@ -181,9 +181,10 @@ class SmartCaseGenerator:
             name=f"{context.test_point.point_name} - 正常操作",
             acceptance_purpose=f"验证{context.test_point.point_name}功能正确。",
             preconditions="1. 系统功能模块已部署完成。\n2. 测试账号已准备。",
-            test_process=f"1. 进入【{context.module_name}】页面。\n2. 执行{context.test_point.point_name}操作。\n3. 观察操作结果。",
+            steps=f"1. 进入【{context.module_name}】页面。\n2. 执行{context.test_point.point_name}操作。\n3. 观察操作结果。",
             expected_result="操作成功完成，提示正确。",
             case_type="功能测试",
+            priority=context.test_point.priority,
         )
         return [case]
 
@@ -211,7 +212,7 @@ class SmartCaseGenerator:
         unique: List[TestCase] = []
 
         for case in cases:
-            process_preview = case.test_process[:100] if case.test_process else ""
+            process_preview = case.steps[:100] if case.steps else ""
             signature = f"{case.module}:{case.name}:{process_preview}"
             normalized = signature.lower().strip()
 

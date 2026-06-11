@@ -125,13 +125,13 @@ class PromptManager:
       "case_name": "用例名称（应包含测试点+场景描述）",
       "scene_name": "测试场景（如：正常操作、异常输入、边界值测试等）",
       "case_type": "用例类型（功能测试/异常测试/边界值测试/安全测试等）",
-      "test_type": "测试类型（格式校验/联动校验/界面校验/边界值校验/必填项校验/数据一致性校验/权限校验/状态流转校验/兼容性校验等）",
+      "priority": "优先级（P0/P1/P2）",
       "acceptance_purpose": "验收目的",
       "preconditions": [
         "前置条件1（根据具体功能定制）",
         "前置条件2"
       ],
-      "test_process": [
+      "steps": [
         "步骤1",
         "步骤2"
       ],
@@ -146,7 +146,7 @@ class PromptManager:
 
 注意：
 - preconditions应根据实际功能定制，不要使用通用模板
-- test_process步骤应具体明确，避免过于笼统
+- steps步骤应具体明确，避免过于笼统
 - 每个测试点生成2-5个用例，覆盖不同维度
 - 避免生成重复或相似的用例
 - 如果有知识库参考内容，请参考历史文档的风格和模式生成用例
@@ -222,10 +222,10 @@ issue_type可选值：redundant_case, missing_scenario, vague_step, unverifiable
       "case_name": "用例名称",
       "scene_name": "测试场景",
       "case_type": "用例类型",
-      "test_type": "测试类型（格式校验/联动校验/界面校验/边界值校验/必填项校验/数据一致性校验/权限校验/状态流转校验/兼容性校验等）",
+      "priority": "优先级（P0/P1/P2）",
       "acceptance_purpose": "验收目的",
       "preconditions": ["前置条件"],
-      "test_process": ["测试步骤"],
+      "steps": ["操作步骤"],
       "expected_result": ["预期结果"]
     }}
   ]
@@ -253,7 +253,7 @@ issue_type可选值：redundant_case, missing_scenario, vague_step, unverifiable
 
 请输出修改后的测试步骤（JSON格式）：
 {{
-  "test_process": [
+  "steps": [
     "步骤1：具体的操作描述",
     "步骤2：具体的操作描述"
   ],
@@ -361,7 +361,7 @@ issue_type可选值：redundant_case, missing_scenario, vague_step, unverifiable
             "original_process": "",
             "original_result": "",
             "original_preconditions": "",
-            "test_process": "",
+            "test_process": "",  # legacy compatibility
             "description": "",
             "suggestion": "",
         }

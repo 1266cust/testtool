@@ -206,13 +206,13 @@ class AutoFixer:
                 name=raw.get("case_name", ""),
                 acceptance_purpose=raw.get("acceptance_purpose", ""),
                 preconditions="\n".join(raw.get("preconditions", [])),
-                test_process="\n".join(
+                steps="\n".join(
                     f"{i+1}. {step}"
-                    for i, step in enumerate(raw.get("test_process", []))
+                    for i, step in enumerate(raw.get("steps", raw.get("test_process", [])))
                 ),
                 expected_result="\n".join(raw.get("expected_result", [])),
                 case_type=raw.get("case_type", "功能测试"),
-                test_type=raw.get("test_type", ""),
+                priority=raw.get("priority", "P1"),
             )
             cases.append(case)
 
@@ -233,9 +233,10 @@ class AutoFixer:
                 name=f"{module_name} - {scenario.scenario_name}",
                 acceptance_purpose=f"验证{scenario.scenario_name}功能正确。",
                 preconditions="1. 系统功能模块已部署完成。\n2. 测试账号已准备。",
-                test_process=f"1. 进入【{module_name}】页面。\n2. 执行{scenario.scenario_name}操作。\n3. 观察结果。",
+                steps=f"1. 进入【{module_name}】页面。\n2. 执行{scenario.scenario_name}操作。\n3. 观察结果。",
                 expected_result="操作成功完成。",
                 case_type="功能测试",
+                priority=scenario.priority,
             )
             cases.append(case)
 
@@ -284,7 +285,7 @@ class AutoFixer:
             case_id=case.case_id,
             case_name=case.name,
             module_name=module_name,
-            original_process=case.test_process,
+            original_process=case.steps,
             description=issue.description,
             suggestion=issue.suggestion,
             requirement_context=requirement_context,
@@ -293,10 +294,10 @@ class AutoFixer:
         try:
             result = self.llm.generate_json(user_prompt, system_prompt)
             modified_case = copy.deepcopy(case)
-            test_process = result.get("test_process", [])
-            if test_process:
-                modified_case.test_process = "\n".join(
-                    f"{i+1}. {step}" for i, step in enumerate(test_process)
+            steps = result.get("steps", result.get("test_process", []))
+            if steps:
+                modified_case.steps = "\n".join(
+                    f"{i+1}. {step}" for i, step in enumerate(steps)
                 )
             return modified_case
         except Exception as e:
@@ -320,7 +321,7 @@ class AutoFixer:
             case_name=case.name,
             module_name=module_name,
             original_result=case.expected_result,
-            test_process=case.test_process[:200] if case.test_process else "",
+            test_process=case.steps[:200] if case.steps else "",
             description=issue.description,
             suggestion=issue.suggestion,
             requirement_context=requirement_context,
@@ -354,7 +355,7 @@ class AutoFixer:
             case_name=case.name,
             module_name=module_name,
             original_preconditions=case.preconditions,
-            test_process=case.test_process[:200] if case.test_process else "",
+            test_process=case.steps[:200] if case.steps else "",
             description=issue.description,
             suggestion=issue.suggestion,
             requirement_context=requirement_context,
@@ -377,7 +378,7 @@ class AutoFixer:
         """备用修复模糊步骤"""
         modified_case = copy.deepcopy(case)
         # 简单地在步骤前添加更具体的描述
-        modified_case.test_process = f"1. 进入测试模块。\n2. 按照需求执行具体操作。\n3. {issue.suggestion[:100] if issue.suggestion else '验证功能正确性。'}"
+        modified_case.steps = f"1. 进入测试模块。\n2. 按照需求执行具体操作。\n3. {issue.suggestion[:100] if issue.suggestion else '验证功能正确性。'}"
         return modified_case
 
     def _fallback_fix_unverifiable_result(self, case: TestCase, issue: ReviewIssue) -> TestCase:

@@ -82,7 +82,7 @@ class TestCaseReviewer:
 
         for i, case in enumerate(cases):
             pre_preview = case.preconditions[:100] if case.preconditions else "无"
-            process_preview = case.test_process[:200] if case.test_process else "无"
+            process_preview = case.steps[:200] if case.steps else "无"
             expected_preview = case.expected_result[:100] if case.expected_result else "无"
 
             lines.append(f"""

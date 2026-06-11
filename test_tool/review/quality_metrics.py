@@ -44,7 +44,7 @@ class QualityMetricsCalculator:
         redundancy_ratio = duplicates / len(cases) if cases else 0
 
         total_steps = sum(
-            len(case.test_process.split("\n"))
+            len(case.steps.split("\n"))
             for case in cases
         )
         avg_steps = total_steps / len(cases) if cases else 0

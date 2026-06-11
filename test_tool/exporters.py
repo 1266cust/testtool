@@ -31,15 +31,15 @@ def _with_timestamp_suffix(path: Path) -> Path:
 
 
 HEADERS = [
-    "用例模块",
     "用例ID",
+    "用例模块",
     "用例名称",
     "验收目的",
     "预置条件",
-    "测试过程",
+    "操作步骤",
     "预期结果",
     "用例类型",
-    "测试类型",
+    "优先级",
 ]
 
 
@@ -53,15 +53,15 @@ def export_cases_to_excel(cases: List[TestCase], path: Path) -> Path:
     for c in cases:
         ws.append(
             [
-                c.module,
                 c.case_id,
+                c.module,
                 c.name,
                 c.acceptance_purpose,
                 c.preconditions,
-                c.test_process,
+                c.steps,
                 c.expected_result,
                 c.case_type,
-                c.test_type,
+                c.priority,
             ]
         )
 
@@ -135,15 +135,15 @@ def export_cases_to_word(cases: List[TestCase], path: Path, title: str = "测试
 
     # 字段定义：(字段名, 字段显示名称)
     fields = [
-        ("module", "用例模块"),
         ("case_id", "用例ID"),
+        ("module", "用例模块"),
         ("name", "用例名称"),
-        ("case_type", "用例类型"),
-        ("test_type", "测试类型"),
         ("acceptance_purpose", "验收目的"),
         ("preconditions", "预置条件"),
-        ("test_process", "测试过程"),
+        ("steps", "操作步骤"),
         ("expected_result", "预期结果"),
+        ("case_type", "用例类型"),
+        ("priority", "优先级"),
     ]
 
     # 每个用例一个竖向表格
@@ -188,15 +188,15 @@ def export_cases_to_word(cases: List[TestCase], path: Path, title: str = "测试
 def export_cases_to_csv(cases: List[TestCase], path: Path) -> Path:
     rows = [
         [
-            c.module,
             c.case_id,
+            c.module,
             c.name,
             c.acceptance_purpose,
             c.preconditions,
-            c.test_process,
+            c.steps,
             c.expected_result,
             c.case_type,
-            c.test_type,
+            c.priority,
         ]
         for c in cases
     ]

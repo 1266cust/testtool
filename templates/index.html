@@ -586,14 +586,14 @@
                   <div class="diff-view">
                     {% if mod.modification_type == 'vague_step' %}
                     <div class="diff-section">
-                      <div class="diff-label">测试步骤</div>
+                      <div class="diff-label">操作步骤</div>
                       <div class="diff-original">
                         <div class="diff-tag original-tag">原内容</div>
-                        <div class="diff-content">{{ mod.original_case.test_process }}</div>
+                        <div class="diff-content">{{ mod.original_case.steps }}</div>
                       </div>
                       <div class="diff-modified">
                         <div class="diff-tag modified-tag">修改后</div>
-                        <div class="diff-content">{{ mod.modified_case.test_process }}</div>
+                        <div class="diff-content">{{ mod.modified_case.steps }}</div>
                       </div>
                     </div>
                     {% elif mod.modification_type == 'unverifiable_result' %}

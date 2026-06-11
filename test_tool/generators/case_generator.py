@@ -68,7 +68,7 @@ def _build_case(
     process: str,
     expected: str,
     case_type: str,
-    test_type: str = "",
+    priority: str = "P1",
 ) -> TestCase:
     """构建测试用例。"""
     return TestCase(
@@ -77,10 +77,10 @@ def _build_case(
         name=point + " - " + scene_name,
         acceptance_purpose=acceptance,
         preconditions=pre,
-        test_process=process,
+        steps=process,
         expected_result=expected,
         case_type=case_type,
-        test_type=test_type,
+        priority=priority,
     )
 
 
@@ -109,7 +109,7 @@ def sections_to_test_cases(
             # 根据操作类型生成不同场景的用例
             scenarios = _get_scenarios_for_action(action)
 
-            for scene_name, process_template, expected_template, case_type_override, test_type in scenarios:
+            for scene_name, process_template, expected_template, case_type_override, _scene_type in scenarios:
                 process = process_template.replace("{point}", point).replace("{module}", module_name)
                 expected = expected_template.replace("{point}", point)
 
@@ -129,7 +129,7 @@ def sections_to_test_cases(
                     process=process,
                     expected=expected,
                     case_type=ct,
-                    test_type=test_type,
+                    priority=priority,
                 ))
                 temp_index += 1
 
@@ -426,7 +426,6 @@ def generate_ui_element_test_cases(
 2. 响应行为符合产品定义。
 3. 异常情况有友好提示。""",
             case_type="功能测试",
-            test_type="界面校验",
         ))
         temp_index += 1
 
@@ -446,7 +445,6 @@ def generate_ui_element_test_cases(
 2. 禁用状态不可点击。
 3. 状态切换及时准确。""",
             case_type="功能测试",
-            test_type="状态流转校验",
         ))
         temp_index += 1
 
@@ -467,7 +465,6 @@ def generate_ui_element_test_cases(
                     expected="""1. 仅产生一条有效记录。
 2. 重复请求被正确拦截或忽略。""",
                     case_type="稳定性测试",
-                    test_type="数据一致性校验",
                 ))
                 temp_index += 1
                 break
@@ -487,7 +484,7 @@ def generate_ui_element_test_cases(
                     expected="""1. 删除前有确认提示。
 2. 删除成功，数据状态正确。""",
                     case_type="功能测试",
-                    test_type="状态流转校验",
+                    
                 ))
                 temp_index += 1
                 break
@@ -513,7 +510,7 @@ def generate_ui_element_test_cases(
 2. 非法输入有明确校验提示。
 3. 边界值处理正确。""",
             case_type="功能测试",
-            test_type="格式校验",
+            
         ))
         temp_index += 1
 
@@ -532,7 +529,7 @@ def generate_ui_element_test_cases(
 2. 提示信息清晰明确。
 3. 填写后可正常提交。""",
             case_type="功能测试",
-            test_type="必填项校验",
+            
         ))
         temp_index += 1
 
@@ -552,7 +549,7 @@ def generate_ui_element_test_cases(
 2. 超长输入有提示或截断。
 3. 无数据丢失或异常。""",
             case_type="边界值测试",
-            test_type="边界值校验",
+            
         ))
         temp_index += 1
 
@@ -572,7 +569,7 @@ def generate_ui_element_test_cases(
 2. 页面不执行任何注入代码。
 3. 存储和显示时无安全风险。""",
             case_type="安全测试",
-            test_type="格式校验",
+            
         ))
         temp_index += 1
 
@@ -593,7 +590,7 @@ def expand_to_min_cases(cases: List[TestCase], min_cases: int) -> List[TestCase]
         variant = replace(
             template,
             name=template.name + " - 测试数据集" + str(round_index),
-            test_process=template.test_process + "\n4. 使用测试数据集" + str(round_index) + "进行验证。",
+            steps=template.steps + "\n4. 使用测试数据集" + str(round_index) + "进行验证。",
             expected_result=template.expected_result + "\n数据集" + str(round_index) + "验证结果符合预期。",
         )
         expanded.append(variant)

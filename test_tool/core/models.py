@@ -49,10 +49,10 @@ class TestCase:
     name: str
     acceptance_purpose: str
     preconditions: str
-    test_process: str
+    steps: str
     expected_result: str
     case_type: str
-    test_type: str = ""
+    priority: str = "P1"
 
 
 @dataclass
