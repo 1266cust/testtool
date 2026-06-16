@@ -1,7 +1,7 @@
 {
   "provider": "deepseek",
   "model_name": "deepseek-v4-pro",
-  "api_key": "sk-op0NaHSWAfdk2LnhzTd83g59jmCa7UFFfvX9gqgySZV7GF49",
+  "api_key": "sk-GzUcuJah14V0A3a70Znsk49x72OVnk3dsiOoGktAZjt8U89E",
   "base_url": "https://tokens.tingyutech.cn/v1",
   "max_tokens": 4096,
   "temperature": 0.7

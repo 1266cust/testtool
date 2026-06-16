@@ -15,8 +15,16 @@ logger = get_logger("parsers.image")
 
 def read_image_file(path: Path, ocr_lang: str = "chi_sim+eng") -> str:
     img = Image.open(str(path))
-    text = pytesseract.image_to_string(img, lang=ocr_lang)
-    return text or ""
+    try:
+        text = pytesseract.image_to_string(img, lang=ocr_lang)
+        return text or ""
+    except pytesseract.TesseractNotFoundError:
+        logger.warning(
+            "Tesseract OCR 未安装或不在 PATH 中，无法提取图片文字。"
+            "图片文件将跳过 OCR 处理。"
+            "请安装: sudo apt-get install tesseract-ocr tesseract-ocr-chi-sim"
+        )
+        return "[OCR 不可用：Tesseract 未安装，图片文字提取已跳过]"
 
 
 def analyze_ui_image(

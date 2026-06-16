@@ -72,7 +72,18 @@ def _ocr_pdf(
     ocr_lang: str,
     progress_callback: Optional[Callable[[PDFParseProgress], None]] = None,
 ) -> str:
-    images = convert_from_path(str(path))
+    try:
+        images = convert_from_path(str(path))
+    except Exception as e:
+        logger.warning(f"PDF 转图片失败 ({e})，OCR 回退不可用")
+        if progress_callback:
+            progress_callback(PDFParseProgress(
+                total_pages=0, processed_pages=0,
+                current_stage="complete",
+                error=f"OCR 回退失败: {e}",
+            ))
+        return ""
+
     total_pages = len(images)
 
     if progress_callback:
@@ -84,7 +95,21 @@ def _ocr_pdf(
 
     ocr_parts: List[str] = []
     for i, img in enumerate(images):
-        ocr_text = pytesseract.image_to_string(img, lang=ocr_lang)
+        try:
+            ocr_text = pytesseract.image_to_string(img, lang=ocr_lang)
+        except pytesseract.TesseractNotFoundError:
+            logger.warning(
+                "Tesseract OCR 未安装或不在 PATH 中，PDF OCR 回退不可用。"
+                "请安装: sudo apt-get install tesseract-ocr tesseract-ocr-chi-sim"
+            )
+            if progress_callback:
+                progress_callback(PDFParseProgress(
+                    total_pages=total_pages,
+                    processed_pages=total_pages,
+                    current_stage="complete",
+                    error="Tesseract OCR 未安装",
+                ))
+            return ""
         if ocr_text.strip():
             ocr_parts.append(ocr_text)
         if progress_callback:

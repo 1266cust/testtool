@@ -142,11 +142,19 @@ class UIElementDetector:
 
     def _extract_ocr_with_boxes(self, img_pil: Image.Image) -> List[OCRResult]:
         """使用 Tesseract 提取文字及其 bounding box。"""
-        data = pytesseract.image_to_data(
-            img_pil,
-            lang=self.ocr_lang,
-            output_type=pytesseract.Output.DICT,
-        )
+        try:
+            data = pytesseract.image_to_data(
+                img_pil,
+                lang=self.ocr_lang,
+                output_type=pytesseract.Output.DICT,
+            )
+        except pytesseract.TesseractNotFoundError:
+            logger.warning(
+                "Tesseract OCR 未安装或不在 PATH 中，UI 元素文字提取不可用。"
+                "将仅基于形状检测进行 UI 分析。"
+                "请安装: sudo apt-get install tesseract-ocr tesseract-ocr-chi-sim"
+            )
+            return []
 
         results: List[OCRResult] = []
         n_boxes = len(data["text"])

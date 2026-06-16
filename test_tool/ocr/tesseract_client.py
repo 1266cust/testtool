@@ -7,6 +7,9 @@ import pytesseract
 from PIL import Image
 
 from ..core.models import OCRResult, BoundingBox
+from ..core.logging import get_logger
+
+logger = get_logger("ocr.tesseract_client")
 
 
 class TesseractClient:
@@ -20,15 +23,29 @@ class TesseractClient:
 
     def extract_text(self, image_path: Path) -> str:
         img = Image.open(str(image_path))
-        return pytesseract.image_to_string(img, lang=self.lang) or ""
+        try:
+            return pytesseract.image_to_string(img, lang=self.lang) or ""
+        except pytesseract.TesseractNotFoundError:
+            logger.warning(
+                "Tesseract OCR 未安装或不在 PATH 中，无法对图片进行 OCR 文字提取。"
+                "请安装 Tesseract OCR: sudo apt-get install tesseract-ocr tesseract-ocr-chi-sim"
+            )
+            return ""
 
     def extract_with_boxes(self, image_path: Path) -> List[OCRResult]:
         img = Image.open(str(image_path))
-        data = pytesseract.image_to_data(
-            img,
-            lang=self.lang,
-            output_type=pytesseract.Output.DICT,
-        )
+        try:
+            data = pytesseract.image_to_data(
+                img,
+                lang=self.lang,
+                output_type=pytesseract.Output.DICT,
+            )
+        except pytesseract.TesseractNotFoundError:
+            logger.warning(
+                "Tesseract OCR 未安装或不在 PATH 中，无法对图片进行 OCR 定位提取。"
+                "请安装 Tesseract OCR: sudo apt-get install tesseract-ocr tesseract-ocr-chi-sim"
+            )
+            return []
 
         results: List[OCRResult] = []
         n_boxes = len(data["text"])
