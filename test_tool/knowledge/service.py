@@ -81,7 +81,16 @@ class KnowledgeService:
 
         try:
             data = json.loads(projects_file.read_text(encoding="utf-8"))
-            return [Project(**p) for p in data]
+            projects = [Project(**p) for p in data]
+            needs_save = False
+            for p in projects:
+                actual_count = len(self.list_documents(p.project_id))
+                if p.document_count != actual_count:
+                    p.document_count = actual_count
+                    needs_save = True
+            if needs_save:
+                self._save_all_projects(projects)
+            return projects
         except Exception as e:
             logger.error(f"Failed to load projects: {e}")
             return []
@@ -188,28 +197,25 @@ class KnowledgeService:
 
         if not chunks:
             logger.warning(f"No chunks generated from {filename}")
-            # 仍然保存文档记录，但 chunk_count 为 0
-            self._save_document(project_id, doc)
-            return doc
-
-        # 生成嵌入向量
-        embeddings = self.embedder.get_embeddings(
-            [chunk.content for chunk in chunks],
-        )
-
-        # 存入向量数据库
-        success = self.vector_store.add_chunks(chunks, embeddings)
-
-        if success:
-            doc.chunk_count = len(chunks)
-            # 更新项目文档数量
-            project.document_count += 1
-            self._update_project(project)
         else:
-            logger.warning(f"Failed to store chunks in vector database")
+            # 生成嵌入向量
+            embeddings = self.embedder.get_embeddings(
+                [chunk.content for chunk in chunks],
+            )
+
+            # 存入向量数据库
+            success = self.vector_store.add_chunks(chunks, embeddings)
+
+            if success:
+                doc.chunk_count = len(chunks)
+            else:
+                logger.warning(f"Failed to store chunks in vector database")
 
         # 保存文档记录
         self._save_document(project_id, doc)
+
+        # 根据实际文档数更新项目计数
+        self._sync_document_count(project_id)
 
         logger.info(f"Added document: {doc.doc_id} to project {project_id}")
         return doc
@@ -245,11 +251,8 @@ class KnowledgeService:
         if doc_dir.exists():
             shutil.rmtree(doc_dir)
 
-        # 更新项目文档数量
-        project = self.get_project(project_id)
-        if project and project.document_count > 0:
-            project.document_count -= 1
-            self._update_project(project)
+        # 根据实际文档数更新项目计数
+        self._sync_document_count(project_id)
 
         logger.info(f"Deleted document: {doc_id}")
         return True
@@ -287,6 +290,14 @@ class KnowledgeService:
                 projects[i] = project
                 break
         self._save_all_projects(projects)
+
+    def _sync_document_count(self, project_id: str):
+        """根据 documents.json 的实际记录数同步项目的 document_count"""
+        actual_count = len(self.list_documents(project_id))
+        project = self.get_project(project_id)
+        if project and project.document_count != actual_count:
+            project.document_count = actual_count
+            self._update_project(project)
 
     # ========== 知识检索 ==========
 
