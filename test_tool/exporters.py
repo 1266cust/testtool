@@ -78,24 +78,29 @@ def export_cases_to_excel(cases: List[TestCase], path: Path) -> Path:
         return alt
 
 
+def _slugify(text: str) -> str:
+    """生成可用于书签ID的安全字符串"""
+    import re
+    s = re.sub(r'[^\w\u4e00-\u9fff]', '_', text)
+    return s[:40] if s else '_blank'
+
+
 def export_cases_to_word(cases: List[TestCase], path: Path, title: str = "测试用例") -> Path:
-    """导出测试用例到Word文档 - 一个用例一个竖向表格"""
+    """导出测试用例到Word文档 - 按模块分组，二级标题带书签，目录页可跳转"""
     from docx.oxml.ns import qn
+    from docx.oxml import OxmlElement
+    from collections import OrderedDict
 
     def set_chinese_font(run, font_name: str = "微软雅黑", size: int = 10):
-        """设置中文字体"""
         run.font.name = font_name
         run.font.size = Pt(size)
-        # 设置东亚字体
         r = run._element
         rPr = r.get_or_add_rPr()
         rFonts = rPr.get_or_add_rFonts()
         rFonts.set(qn('w:eastAsia'), font_name)
 
     def add_field_row(table, row_idx: int, field_name: str, value: str):
-        """添加一行：字段名 | 值"""
         row = table.rows[row_idx]
-        # 字段名单元格
         cell0 = row.cells[0]
         cell0.text = ""
         p0 = cell0.paragraphs[0]
@@ -103,28 +108,55 @@ def export_cases_to_word(cases: List[TestCase], path: Path, title: str = "测试
         run0.bold = True
         set_chinese_font(run0, "微软雅黑", 10)
 
-        # 值单元格
         cell1 = row.cells[1]
         cell1.text = ""
         p1 = cell1.paragraphs[0]
         run1 = p1.add_run(str(value) if value else "")
         set_chinese_font(run1, "微软雅黑", 10)
 
+    def add_bookmark(paragraph, bookmark_name: str):
+        tag_begin = OxmlElement('w:bookmarkStart')
+        tag_begin.set(qn('w:id'), str(hash(bookmark_name) % 10000 + 1))
+        tag_begin.set(qn('w:name'), bookmark_name)
+        tag_end = OxmlElement('w:bookmarkEnd')
+        tag_end.set(qn('w:id'), tag_begin.get(qn('w:id')))
+        paragraph._element.insert(0, tag_begin)
+        paragraph._element.append(tag_end)
+
+    def add_hyperlink(paragraph, bookmark_name: str, text: str):
+        hyperlink = OxmlElement('w:hyperlink')
+        hyperlink.set(qn('w:anchor'), bookmark_name)
+        run_elem = OxmlElement('w:r')
+        rPr = OxmlElement('w:rPr')
+        rStyle = OxmlElement('w:rStyle')
+        rStyle.set(qn('w:val'), 'Hyperlink')
+        rPr.append(rStyle)
+        rFonts = OxmlElement('w:rFonts')
+        rFonts.set(qn('w:eastAsia'), '微软雅黑')
+        rFonts.set(qn('w:ascii'), '微软雅黑')
+        rPr.append(rFonts)
+        sz = OxmlElement('w:sz')
+        sz.set(qn('w:val'), '20')
+        rPr.append(sz)
+        run_elem.append(rPr)
+        t = OxmlElement('w:t')
+        t.text = text
+        run_elem.append(t)
+        hyperlink.append(run_elem)
+        paragraph._element.append(hyperlink)
+
     doc = Document()
 
-    # 设置文档默认字体
     style = doc.styles['Normal']
     style.font.name = '微软雅黑'
     style.font.size = Pt(10)
     style._element.rPr.rFonts.set(qn('w:eastAsia'), '微软雅黑')
 
-    # 文档标题
     title_para = doc.add_heading(title, level=0)
     title_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
     for run in title_para.runs:
         set_chinese_font(run, "微软雅黑", 18)
 
-    # 生成信息
     info_para = doc.add_paragraph()
     run_time = info_para.add_run(f"生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     set_chinese_font(run_time, "微软雅黑", 10)
@@ -133,7 +165,21 @@ def export_cases_to_word(cases: List[TestCase], path: Path, title: str = "测试
 
     doc.add_paragraph()
 
-    # 字段定义：(字段名, 字段显示名称)
+    module_groups: OrderedDict[str, List[TestCase]] = OrderedDict()
+    for c in cases:
+        module_groups.setdefault(c.module, []).append(c)
+
+    toc_heading = doc.add_heading("目录", level=1)
+    for run in toc_heading.runs:
+        set_chinese_font(run, "微软雅黑", 14)
+
+    for module_name, module_cases in module_groups.items():
+        bookmark_name = _slugify(module_name)
+        toc_item = doc.add_paragraph()
+        add_hyperlink(toc_item, bookmark_name, f"{module_name}（{len(module_cases)} 条用例）")
+
+    doc.add_paragraph()
+
     fields = [
         ("case_id", "用例ID"),
         ("module", "用例模块"),
@@ -146,34 +192,40 @@ def export_cases_to_word(cases: List[TestCase], path: Path, title: str = "测试
         ("priority", "优先级"),
     ]
 
-    # 每个用例一个竖向表格
-    for idx, c in enumerate(cases):
-        # 用例编号标题
-        case_title = doc.add_paragraph()
-        run_title = case_title.add_run(f"【用例 {idx + 1}】")
-        run_title.bold = True
-        set_chinese_font(run_title, "微软雅黑", 11)
+    global_idx = 0
+    for module_name, module_cases in module_groups.items():
+        bookmark_name = _slugify(module_name)
+        module_heading = doc.add_heading(module_name, level=2)
+        add_bookmark(module_heading, bookmark_name)
+        for run in module_heading.runs:
+            set_chinese_font(run, "微软雅黑", 13)
 
-        # 创建 2列 x N行 的表格
-        table = doc.add_table(rows=len(fields), cols=2)
-        table.style = 'Table Grid'
-        table.alignment = WD_TABLE_ALIGNMENT.LEFT
+        module_info = doc.add_paragraph()
+        run_mi = module_info.add_run(f"共 {len(module_cases)} 条用例")
+        set_chinese_font(run_mi, "微软雅黑", 10)
 
-        # 设置列宽
-        for row in table.rows:
-            row.cells[0].width = Inches(1.2)
-            row.cells[1].width = Inches(5.3)
+        for c in module_cases:
+            global_idx += 1
+            case_title = doc.add_paragraph()
+            run_title = case_title.add_run(f"【用例 {global_idx}】{c.name}")
+            run_title.bold = True
+            set_chinese_font(run_title, "微软雅黑", 11)
 
-        # 填充数据
-        for i, (field_name, display_name) in enumerate(fields):
-            value = getattr(c, field_name, "")
-            # 列表类型转字符串
-            if isinstance(value, list):
-                value = "\n".join(f"{j+1}. {v}" for j, v in enumerate(value)) if value else ""
-            add_field_row(table, i, display_name, value)
+            table = doc.add_table(rows=len(fields), cols=2)
+            table.style = 'Table Grid'
+            table.alignment = WD_TABLE_ALIGNMENT.LEFT
 
-        # 用例之间添加空行
-        doc.add_paragraph()
+            for row in table.rows:
+                row.cells[0].width = Inches(1.2)
+                row.cells[1].width = Inches(5.3)
+
+            for i, (field_name, display_name) in enumerate(fields):
+                value = getattr(c, field_name, "")
+                if isinstance(value, list):
+                    value = "\n".join(f"{j+1}. {v}" for j, v in enumerate(value)) if value else ""
+                add_field_row(table, i, display_name, value)
+
+            doc.add_paragraph()
 
     path.parent.mkdir(parents=True, exist_ok=True)
     try:
