@@ -131,7 +131,12 @@ class LLMClient:
         system_prompt: Optional[str] = None,
         **kwargs
     ) -> str:
-        """多模态生成：支持图片输入，自动使用视觉模型配置"""
+        """多模态生成：支持图片输入，需要视觉模型配置"""
+        if not self.config.has_vision_model:
+            raise ValueError(
+                "当前模型不支持图片输入。请在 llm_config.json 中配置支持视觉的模型 "
+                "(vision_provider/vision_model_name/vision_api_key/vision_base_url)。"
+            )
         vision_config = self.config.get_vision_config()
         provider = get_provider(vision_config.provider)
         response = provider.generate_with_images(

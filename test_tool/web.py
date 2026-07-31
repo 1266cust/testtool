@@ -661,6 +661,18 @@ def analyze_ui_vision():
 
     try:
         if analysis_mode == "vision" and llm_available:
+            if not llm_env_config.has_vision_model:
+                shutil.rmtree(upload_dir, ignore_errors=True)
+                shutil.rmtree(output_dir, ignore_errors=True)
+                return render_template(
+                    "index.html",
+                    vision_error="当前模型不支持图片输入，请配置视觉模型（vision_provider/vision_model_name/vision_api_key）或使用CV分析模式。",
+                    llm_available=llm_available,
+                    vision_available=False,
+                    projects=projects,
+                    has_knowledge=HAS_KNOWLEDGE,
+                    active_tab="vision",
+                )
             from .llm.client import LLMClient, LLMConfig
             llm_config = LLMConfig(
                 provider=llm_env_config.provider,
@@ -714,6 +726,18 @@ def analyze_ui_vision():
             )
 
         elif analysis_mode == "hybrid" and llm_available:
+            if not llm_env_config.has_vision_model:
+                shutil.rmtree(upload_dir, ignore_errors=True)
+                shutil.rmtree(output_dir, ignore_errors=True)
+                return render_template(
+                    "index.html",
+                    vision_error="当前模型不支持图片输入，请配置视觉模型或使用CV分析模式。",
+                    llm_available=llm_available,
+                    vision_available=False,
+                    projects=projects,
+                    has_knowledge=HAS_KNOWLEDGE,
+                    active_tab="vision",
+                )
             from .llm.client import LLMClient, LLMConfig
             llm_config = LLMConfig(
                 provider=llm_env_config.provider,
