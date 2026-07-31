@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Dict, Any, Optional
 
-from ..core.models import RequirementSection, UIAnalysisResult
+from ..core.models import RequirementSection, UIAnalysisResult, VisionAnalysisResult
 
 
 @dataclass
@@ -62,6 +62,75 @@ SYSTEM_PROMPT_CASE_FIX = """你是一名专业的测试用例修复专家，负�
 4. 遵循测试用例编写规范
 
 输出格式：严格遵循JSON格式输出，确保结构正确。"""
+
+
+SYSTEM_PROMPT_AUTOMATION_CODE = """你是一名专业的自动化测试工程师，擅长使用 Playwright (Python) 编写高质量的 UI 自动化测试脚本。
+
+编码原则：
+1. 使用 Page Object 模式组织代码
+2. 优先使用 get_by_role、get_by_label、get_by_text 等语义化定位器
+3. 合理使用 expect 断言验证操作结果
+4. 添加适当的等待策略（wait_for_load_state、wait_for_selector）
+5. 生成的代码应可直接运行，基于 pytest-playwright
+
+输出格式：直接输出 Python 代码，不要添加额外说明。代码用 ```python ... ``` 包裹。"""
+
+
+SYSTEM_PROMPT_AUTOMATION_CODE_WITH_PROJECT = """你是一名专业的自动化测试工程师，擅长使用 Playwright (Python) 编写高质量的 UI 自动化测试脚本，并能将新代码无缝集成到已有项目中。
+
+编码原则：
+1. 使用 Page Object 模式组织代码
+2. 优先使用 get_by_role、get_by_label、get_by_text 等语义化定位器
+3. 合理使用 expect 断言验证操作结果
+4. 添加适当的等待策略（wait_for_load_state、wait_for_selector）
+5. 生成的代码应可直接运行，基于 pytest-playwright
+
+项目集成原则：
+1. 严格遵循项目现有的命名规范（类名、方法名、文件名）
+2. 使用与项目一致的 import 风格（相对导入或绝对导入）
+3. 如果项目有 Page Object 基类，必须继承该基类
+4. 使用项目 conftest.py 中已定义的 fixture
+5. 匹配项目现有的代码风格（注释语言、缩进、docstring 格式）
+6. 将文件放置在项目已有的目录结构中
+
+输出格式要求：
+1. 先输出代码，用 ```python ... ``` 包裹
+2. 然后输出 RECOMMENDED_PATH: <建议的文件路径，相对于项目根目录>
+3. 然后输出集成步骤：
+   INTEGRATION_INSTRUCTIONS:
+   1. 步骤说明
+   2. 步骤说明
+4. 如果需要在已有文件中添加 import，输出：
+   IMPORTS_TO_ADD:
+    - <文件路径>: <import 语句>"""
+
+
+SYSTEM_PROMPT_UI_INTERACTION = """你是一名专业的UI自动化测试工程师，擅长分析原型图/UI截图，识别页面元素并生成完整的UI交互操作序列。
+
+分析原则：
+1. 识别页面中所有可交互元素（按钮、输入框、下拉框、复选框、链接等）
+2. 根据元素类型和位置关系，推断合理的操作顺序
+3. 为每个操作步骤提供精确的 Playwright 定位策略
+4. 填写类操作应提供合理的测试数据
+5. 操作序列应覆盖典型用户操作流程
+
+输出格式：严格遵循JSON格式，结构如下：
+```json
+{
+  "steps": [
+    {
+      "step_number": 1,
+      "action": "click/fill/select/hover/scroll/check",
+      "target": "元素名称",
+      "target_type": "button/input/dropdown/checkbox/link/tab",
+      "locator_strategy": "get_by_role/get_by_label/get_by_text/get_by_placeholder/get_by_test_id",
+      "locator_value": "定位值",
+      "input_value": "输入值（仅fill/select时需要）",
+      "description": "操作描述"
+    }
+  ]
+}
+```"""
 
 
 class PromptManager:
@@ -323,6 +392,132 @@ issue_type可选值：redundant_case, missing_scenario, vague_step, unverifiable
         expected_output_format="json"
     )
 
+    GENERATE_AUTOMATION_CODE = PromptTemplate(
+        name="generate_automation_code",
+        system_prompt=SYSTEM_PROMPT_AUTOMATION_CODE,
+        user_prompt_template="""
+请根据以下网页UI元素信息，生成 Playwright (Python) 自动化测试代码：
+
+【页面名称】: {page_name}
+【页面URL】: {page_url}
+
+【UI元素信息】:
+{ui_elements_info}
+
+【元素定位详情】:
+{locators_description}
+
+请生成完整的测试代码，要求：
+1. 使用 Page Object 模式，创建页面对象类
+2. 使用 pytest-playwright 框架
+3. 为每个可交互元素生成定位器属性
+4. 为按钮生成点击测试方法
+5. 为表单字段生成填写和验证测试方法
+6. 包含页面导航方法
+7. 添加合理的 expect 断言
+8. 使用 get_by_role、get_by_label、get_by_text 等语义化定位器
+
+直接输出 Python 代码：
+```python
+# 在这里生成代码
+```
+""",
+        expected_output_format="text"
+    )
+
+    GENERATE_AUTOMATION_CODE_WITH_PROJECT = PromptTemplate(
+        name="generate_automation_code_with_project",
+        system_prompt=SYSTEM_PROMPT_AUTOMATION_CODE_WITH_PROJECT,
+        user_prompt_template="""
+请根据以下网页UI元素信息和现有项目结构，生成能直接集成到项目中的 Playwright (Python) 自动化测试代码：
+
+【页面名称】: {page_name}
+【页面URL】: {page_url}
+
+【UI元素信息】:
+{ui_elements_info}
+
+【元素定位详情】:
+{locators_description}
+
+【现有项目结构】:
+{project_context_info}
+
+请生成能无缝集成到上述项目的测试代码，要求：
+1. 遵循项目现有的命名规范和代码风格
+2. 使用项目中已有的基类、fixture和工具函数
+3. 导入路径与现有文件保持一致
+4. 如果项目使用了特定的断言模式或等待策略，请沿用
+5. 为每个可交互元素生成定位器属性
+6. 为按钮生成点击测试方法
+7. 为表单字段生成填写和验证测试方法
+8. 添加合理的 expect 断言
+
+输出格式：
+```python
+# 在这里生成代码
+```
+
+RECOMMENDED_PATH: <建议的文件路径，相对于项目根目录>
+
+INTEGRATION_INSTRUCTIONS:
+1. <集成步骤1>
+2. <集成步骤2>
+
+IMPORTS_TO_ADD:
+- <需要在已有文件中添加的import语句，格式: 文件路径: import语句>
+""",
+        expected_output_format="text"
+    )
+
+    GENERATE_VISION_INTERACTION = PromptTemplate(
+        name="generate_vision_interaction",
+        system_prompt=SYSTEM_PROMPT_UI_INTERACTION,
+        user_prompt_template="""
+请根据以下多模态大模型识别的UI元素信息，生成完整的UI交互操作序列：
+
+【页面名称】: {page_name}
+【页面URL】: {page_url}
+
+【页面描述】: {page_description}
+【页面类型】: {page_type}
+
+【识别到的UI元素】:
+{vision_elements_info}
+
+【页面流转关系】:
+{page_flows_info}
+
+【用户补充描述】: {user_description}
+
+请生成完整的交互操作序列，要求：
+1. 覆盖页面的主要操作流程
+2. 为填写类操作提供合理的测试数据
+3. 为每个操作提供精确的 Playwright 定位策略
+4. 考虑元素之间的依赖关系和操作顺序
+5. 包含必要的断言验证步骤
+
+输出格式：严格遵循JSON格式，结构如下：
+```json
+{{
+  "steps": [
+    {{
+      "step_number": 1,
+      "action": "click/fill/select/hover/scroll/check/uncheck/press_key/wait/assert",
+      "target": "元素名称",
+      "target_type": "button/input/dropdown/checkbox/radio/link/tab",
+      "locator_strategy": "get_by_role/get_by_label/get_by_text/get_by_placeholder/get_by_test_id",
+      "locator_value": "定位值",
+      "input_value": "输入值（仅fill/select时需要）",
+      "description": "操作描述"
+    }}
+  ]
+}}
+```
+""",
+        expected_output_format="json"
+    )
+
     def get_template(self, name: str) -> PromptTemplate:
         """获取模板"""
         templates = {
@@ -333,6 +528,9 @@ issue_type可选值：redundant_case, missing_scenario, vague_step, unverifiable
             "fix_vague_step": self.FIX_VAGUE_STEP,
             "fix_unverifiable_result": self.FIX_UNVERIFIABLE_RESULT,
             "fix_incorrect_precondition": self.FIX_INCORRECT_PRECONDITION,
+            "generate_automation_code": self.GENERATE_AUTOMATION_CODE,
+            "generate_automation_code_with_project": self.GENERATE_AUTOMATION_CODE_WITH_PROJECT,
+            "generate_vision_interaction": self.GENERATE_VISION_INTERACTION,
         }
         return templates[name]
 
@@ -353,17 +551,25 @@ issue_type可选值：redundant_case, missing_scenario, vague_step, unverifiable
             "cases_content": "",
             "existing_cases_count": 0,
             "missing_scenarios": "",
-            "knowledge_context": "",  # 知识库上下文
-            # 修复模板的默认参数
+            "knowledge_context": "",
             "case_id": "",
             "case_name": "",
             "module_name": "",
             "original_process": "",
             "original_result": "",
             "original_preconditions": "",
-            "test_process": "",  # legacy compatibility
+            "test_process": "",
             "description": "",
             "suggestion": "",
+            "page_url": "https://example.com",
+            "page_name": "page",
+            "locators_description": "",
+            "project_context_info": "",
+            "page_description": "",
+            "page_type": "",
+            "vision_elements_info": "",
+            "page_flows_info": "",
+            "user_description": "",
         }
 
         full_kwargs = {**defaults, **kwargs}
@@ -397,3 +603,58 @@ issue_type可选值：redundant_case, missing_scenario, vague_step, unverifiable
             info_parts.append(f"界面文本摘要: {text_preview}")
 
         return "\n".join(info_parts) if info_parts else "无UI元素信息"
+
+    def build_vision_elements_info(
+        self,
+        vision_result: Optional[VisionAnalysisResult]
+    ) -> str:
+        """构建多模态大模型识别的UI元素信息描述"""
+        if not vision_result or not vision_result.elements:
+            return "无多模态识别结果"
+
+        info_parts = []
+
+        if vision_result.page_description:
+            info_parts.append(f"页面描述: {vision_result.page_description}")
+
+        if vision_result.page_type:
+            info_parts.append(f"页面类型: {vision_result.page_type}")
+
+        interactive = [e for e in vision_result.elements if e.is_interactive]
+        if interactive:
+            parts = []
+            for elem in interactive[:20]:
+                desc = f"  - {elem.element_type}[{elem.text}]"
+                if elem.suggested_action:
+                    desc += f" -> {elem.suggested_action}"
+                if elem.locator_strategy and elem.locator_value:
+                    desc += f" ({elem.locator_strategy}: {elem.locator_value})"
+                parts.append(desc)
+            info_parts.append("可交互元素:\n" + "\n".join(parts))
+
+        non_interactive = [e for e in vision_result.elements if not e.is_interactive]
+        if non_interactive:
+            parts = []
+            for elem in non_interactive[:10]:
+                parts.append(f"  - {elem.element_type}[{elem.text}]: {elem.description}")
+            info_parts.append("其他元素:\n" + "\n".join(parts))
+
+        return "\n".join(info_parts) if info_parts else "无多模态识别结果"
+
+    def build_page_flows_info(
+        self,
+        vision_result: Optional[VisionAnalysisResult]
+    ) -> str:
+        """构建页面流转关系描述"""
+        if not vision_result or not vision_result.page_flows:
+            return "无页面流转信息"
+
+        parts = []
+        for flow in vision_result.page_flows:
+            desc = f"  {flow.from_page} -> {flow.to_page}"
+            desc += f" (触发: {flow.trigger_element} / {flow.trigger_action})"
+            if flow.condition:
+                desc += f" [条件: {flow.condition}]"
+            parts.append(desc)
+
+        return "\n".join(parts)

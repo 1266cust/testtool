@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, List
+import base64
 import requests
 
 
@@ -22,6 +23,66 @@ class LLMProvider(ABC):
     ) -> str:
         """生成响应"""
         pass
+
+    def generate_with_images(
+        self,
+        model: str,
+        prompt: str,
+        image_paths: List[str],
+        system_prompt: Optional[str],
+        api_key: Optional[str],
+        base_url: Optional[str],
+        max_tokens: int,
+        temperature: float,
+        timeout: int,
+    ) -> str:
+        """多模态生成：支持图片输入（默认实现将图片编码为base64）"""
+        from pathlib import Path
+
+        content_parts = []
+        for img_path in image_paths:
+            p = Path(img_path)
+            if not p.exists():
+                continue
+            suffix = p.suffix.lower()
+            mime_map = {
+                ".png": "image/png",
+                ".jpg": "image/jpeg",
+                ".jpeg": "image/jpeg",
+                ".webp": "image/webp",
+                ".bmp": "image/bmp",
+                ".tiff": "image/tiff",
+            }
+            mime_type = mime_map.get(suffix, "image/png")
+            with open(str(p), "rb") as f:
+                b64 = base64.b64encode(f.read()).decode("utf-8")
+            content_parts.append({
+                "type": "image_url",
+                "image_url": {"url": f"data:{mime_type};base64,{b64}"},
+            })
+        content_parts.append({"type": "text", "text": prompt})
+
+        from openai import OpenAI
+        effective_base_url = base_url or "https://api.openai.com/v1"
+        client = OpenAI(api_key=api_key, base_url=effective_base_url)
+
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": content_parts})
+
+        response = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+
+        if isinstance(response, str):
+            return response
+        if hasattr(response, 'choices') and response.choices:
+            return response.choices[0].message.content
+        return str(response)
 
 
 class DeepSeekProvider(LLMProvider):

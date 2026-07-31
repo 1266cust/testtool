@@ -35,6 +35,37 @@
       .chat-header h1 { margin: 0; font-size: 20px; font-weight: 600; }
       .chat-header .subtitle { font-size: 13px; opacity: 0.85; }
       .chat-body { padding: 24px; max-height: 70vh; overflow-y: auto; }
+      .tab-bar {
+        display: flex;
+        border-bottom: 1px solid #e5e7eb;
+        background: #f9fafb;
+      }
+      .tab-btn {
+        flex: 1;
+        padding: 14px 20px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        color: #6b7280;
+        transition: all 0.2s;
+        position: relative;
+      }
+      .tab-btn:hover { color: #374151; background: #f3f4f6; }
+      .tab-btn.active {
+        color: #667eea;
+        background: #fff;
+      }
+      .tab-btn.active::after {
+        content: '';
+        position: absolute;
+        bottom: 0; left: 0; right: 0;
+        height: 2px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      }
+      .tab-content { display: none; }
+      .tab-content.active { display: block; }
       .message { margin-bottom: 16px; display: flex; gap: 12px; }
       .message.user { flex-direction: row-reverse; }
       .avatar {
@@ -464,6 +495,391 @@
         color: #374151;
         white-space: pre-wrap;
       }
+      .code-preview-area {
+        padding: 20px;
+        background: #1e1e2e;
+        border-radius: 12px;
+        margin-top: 16px;
+        position: relative;
+      }
+      .code-preview-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+      .code-preview-title { color: #cdd6f4; font-size: 14px; font-weight: 600; }
+      .code-actions { display: flex; gap: 8px; }
+      .code-action-btn {
+        padding: 6px 12px;
+        border-radius: 6px;
+        border: 1px solid #45475a;
+        background: #313244;
+        color: #cdd6f4;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.2s;
+      }
+      .code-action-btn:hover { background: #45475a; }
+      .code-action-btn.download { border-color: #a6e3a1; color: #a6e3a1; }
+      .code-action-btn.download:hover { background: #a6e3a1; color: #1e1e2e; }
+      .code-block {
+        background: #181825;
+        border-radius: 8px;
+        padding: 16px;
+        overflow-x: auto;
+        max-height: 500px;
+        overflow-y: auto;
+      }
+      .code-block pre {
+        margin: 0;
+        font-family: 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+        font-size: 13px;
+        line-height: 1.6;
+        color: #cdd6f4;
+        white-space: pre;
+      }
+      .code-input-section { margin-top: 12px; }
+      .code-input-row {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      .code-input-row .field {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .code-input-row .field label {
+        font-size: 12px;
+        color: #6b7280;
+        font-weight: 500;
+      }
+      .code-input-row .field input {
+        padding: 8px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .code-input-row .field input:focus { border-color: #667eea; }
+
+      .project-upload-section {
+        margin-top: 12px;
+        padding: 14px 16px;
+        border: 2px dashed #667eea;
+        border-radius: 12px;
+        background: #f5f3ff;
+      }
+      .project-upload-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: #667eea;
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .project-upload-desc {
+        font-size: 12px;
+        color: #6b7280;
+        margin-bottom: 10px;
+        line-height: 1.5;
+      }
+      .project-path-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .project-path-row input[type="text"] {
+        flex: 1;
+        padding: 8px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 13px;
+        outline: none;
+        transition: border-color 0.2s;
+        font-family: 'Fira Code', 'JetBrains Mono', Consolas, monospace;
+      }
+      .project-path-row input[type="text"]:focus { border-color: #667eea; }
+      .browse-btn {
+        padding: 8px 14px;
+        background: #667eea;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 13px;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: background 0.2s;
+      }
+      .browse-btn:hover { background: #5a6fd6; }
+      .browse-path-bar {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .browse-path-bar input {
+        flex: 1;
+        padding: 8px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 13px;
+        font-family: 'Fira Code', 'JetBrains Mono', Consolas, monospace;
+        outline: none;
+      }
+      .browse-path-bar input:focus { border-color: #667eea; }
+      .browse-path-bar button {
+        padding: 8px 14px;
+        background: #667eea;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .browse-dir-list {
+        max-height: 45vh;
+        overflow-y: auto;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        margin-bottom: 12px;
+      }
+      .browse-dir-item {
+        padding: 10px 14px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        color: #374151;
+        border-bottom: 1px solid #f3f4f6;
+        transition: background 0.15s;
+      }
+      .browse-dir-item:last-child { border-bottom: none; }
+      .browse-dir-item:hover { background: #f5f3ff; }
+      .browse-dir-item.parent-dir { color: #667eea; font-weight: 600; }
+      .browse-dir-empty {
+        padding: 24px;
+        text-align: center;
+        color: #9ca3af;
+        font-size: 13px;
+      }
+      .browse-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+      .browse-actions button {
+        padding: 8px 18px;
+        border-radius: 8px;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .browse-cancel {
+        background: #f3f4f6;
+        border: 1px solid #d1d5db;
+        color: #374151;
+      }
+      .browse-select {
+        background: #667eea;
+        border: none;
+        color: #fff;
+      }
+      .browse-select:hover { background: #5a6fd6; }
+      .browse-error {
+        padding: 10px;
+        color: #ef4444;
+        font-size: 13px;
+        text-align: center;
+      }
+      .project-upload-actions {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+      .project-file-info {
+        font-size: 12px;
+        color: #374151;
+        margin-top: 8px;
+        padding: 8px 12px;
+        background: #fff;
+        border-radius: 6px;
+        border: 1px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .project-file-info .remove-project {
+        margin-left: auto;
+        color: #ef4444;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold;
+      }
+      .project-file-info .remove-project:hover { color: #b91c1c; }
+
+      .integration-section {
+        margin-top: 16px;
+        padding: 16px 20px;
+        background: #eff6ff;
+        border-radius: 12px;
+        border: 1px solid #bfdbfe;
+      }
+      .integration-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1e40af;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .integration-subtitle {
+        font-size: 13px;
+        color: #1e40af;
+        font-weight: 500;
+        margin-bottom: 6px;
+        margin-top: 12px;
+      }
+      .integration-path {
+        font-family: 'Fira Code', 'JetBrains Mono', Consolas, monospace;
+        background: #dbeafe;
+        padding: 8px 14px;
+        border-radius: 6px;
+        font-size: 13px;
+        color: #1e3a8a;
+        word-break: break-all;
+      }
+      .integration-list {
+        list-style: decimal;
+        padding-left: 20px;
+        font-size: 13px;
+        color: #374151;
+        line-height: 2;
+      }
+      .integration-imports {
+        margin-top: 8px;
+        padding: 10px 14px;
+        background: #1e1e2e;
+        border-radius: 8px;
+        font-family: 'Fira Code', 'JetBrains Mono', Consolas, monospace;
+        font-size: 12px;
+        color: #a6e3a1;
+        line-height: 1.8;
+      }
+      .vision-result-area {
+        padding: 20px;
+        background: #fefce8;
+        border-radius: 12px;
+        margin-top: 16px;
+      }
+      .vision-result-title {
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        color: #a16207;
+      }
+      .vision-elements-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .vision-element-card {
+        padding: 10px 14px;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        font-size: 13px;
+      }
+      .vision-element-card.interactive {
+        border-left: 3px solid #667eea;
+      }
+      .vision-element-card .elem-type {
+        font-size: 11px;
+        padding: 2px 6px;
+        background: #dbeafe;
+        color: #1e40af;
+        border-radius: 4px;
+        display: inline-block;
+        margin-bottom: 4px;
+      }
+      .vision-element-card .elem-text {
+        font-weight: 600;
+        color: #374151;
+      }
+      .vision-element-card .elem-action {
+        font-size: 12px;
+        color: #6b7280;
+        margin-top: 4px;
+      }
+      .vision-flow-steps {
+        margin-top: 12px;
+      }
+      .vision-flow-step {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        background: #fff;
+        border-radius: 6px;
+        margin-bottom: 6px;
+        font-size: 13px;
+        border: 1px solid #e5e7eb;
+      }
+      .vision-flow-step .step-num {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #667eea;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 600;
+        flex-shrink: 0;
+      }
+      .vision-flow-step .step-action {
+        font-weight: 600;
+        color: #374151;
+        min-width: 60px;
+      }
+      .vision-flow-step .step-target {
+        color: #667eea;
+      }
+      .vision-flow-step .step-locator {
+        font-size: 11px;
+        color: #6b7280;
+        font-family: 'Fira Code', 'JetBrains Mono', Consolas, monospace;
+      }
+      .vision-page-flow {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background: #fff;
+        border-radius: 6px;
+        margin-bottom: 6px;
+        font-size: 13px;
+        border: 1px solid #e5e7eb;
+      }
+      .vision-page-flow .flow-arrow {
+        color: #667eea;
+        font-weight: 600;
+      }
+      .vision-section-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #374151;
+        margin-top: 16px;
+        margin-bottom: 8px;
+        padding-bottom: 4px;
+        border-bottom: 1px solid #e5e7eb;
+      }
     </style>
   </head>
   <body>
@@ -479,11 +895,18 @@
         </button>
       </div>
 
+      <div class="tab-bar">
+        <button class="tab-btn {% if active_tab != 'code' %}active{% endif %}" onclick="switchTab('cases')">用例生成</button>
+        <button class="tab-btn {% if active_tab == 'code' %}active{% endif %}" onclick="switchTab('code')">代码生成</button>
+      </div>
+
+      <!-- 用例生成 Tab -->
+      <div class="tab-content {% if active_tab != 'code' %}active{% endif %}" id="tabCases">
       <div class="chat-body" id="chatBody">
         <div class="message bot">
           <div class="avatar bot">🤖</div>
           <div class="message-content">
-            欢迎使用智能测试用例生成工具！支持<strong>智能生成</strong>（LLM语义分析）、<strong>用例评审</strong>和<strong>自动修复</strong>。请输入需求描述或上传文档/截图。
+            欢迎使用智能测试用例生成工具！支持<strong>智能生成</strong>（LLM语义分析）、<strong>UI截图识别</strong>（多模态视觉分析）、<strong>用例评审</strong>和<strong>自动修复</strong>。请输入需求描述或上传文档/截图。
           </div>
         </div>
 
@@ -643,7 +1066,7 @@
                 rows="3"
               >{{ requirement_text if requirement_text else '' }}</textarea>
               <div style="font-size: 12px; color: #9ca3af; margin-top: 4px;">
-                💡 提示：可在上方文本框直接粘贴截图，图片会自动添加到下方预览区
+                提示：可在上方文本框直接粘贴截图，图片会自动添加到下方预览区
               </div>
 
               <div class="file-upload-area">
@@ -719,9 +1142,9 @@
 
               <div class="llm-status {% if llm_available %}available{% else %}unavailable{% endif %}">
                 {% if llm_available %}
-                ✅ LLM已配置，可使用智能生成
+                LLM已配置，可使用智能生成
                 {% else %}
-                ⚠️ LLM未配置，请设置环境变量 <code>LLM_API_KEY</code>（<a href="https://platform.deepseek.com/api_keys" target="_blank">获取DeepSeek API Key</a>）
+                LLM未配置，请设置环境变量 <code>LLM_API_KEY</code>（<a href="https://platform.deepseek.com/api_keys" target="_blank">获取DeepSeek API Key</a>）
                 {% endif %}
               </div>
             </div>
@@ -730,17 +1153,201 @@
           </div>
 
           <div class="tips">
-            支持：需求文档（txt/md/docx/pdf/xlsx）和界面截图（png/jpg）。智能生成模式下，LLM会分析需求语义并生成针对性用例。
+            支持：需求文档（txt/md/docx/pdf/xlsx）和界面截图（png/jpg）。智能生成模式下，LLM会分析需求语义并生成针对性用例；上传UI截图时，会自动通过多模态大模型识别页面元素、提取测试点并生成用例。
           </div>
         </div>
       </form>
+      </div><!-- end tabCases -->
+
+      <!-- 代码生成 Tab -->
+      <div class="tab-content {% if active_tab == 'code' %}active{% endif %}" id="tabCode">
+        <div class="chat-body">
+          <div class="message bot">
+            <div class="avatar bot">&#60;/&#62;</div>
+            <div class="message-content">
+              上传网页截图，自动识别页面UI元素（按钮、输入框、下拉框等），生成 <strong>Playwright</strong> 自动化测试代码。支持<strong>模板生成</strong>和<strong>智能生成</strong>（LLM）两种模式。
+            </div>
+          </div>
+
+          {% if code_error %}
+          <div class="message bot">
+            <div class="avatar bot">&#60;/&#62;</div>
+            <div class="message-content result-area error">
+              <div class="result-title">生成失败</div>
+              <div>{{ code_error }}</div>
+            </div>
+          </div>
+          {% endif %}
+
+          {% if code_success %}
+          <div class="message bot">
+            <div class="avatar bot">&#60;/&#62;</div>
+            <div class="message-content result-area">
+              <div class="result-title">{{ code_success }}</div>
+            </div>
+          </div>
+          {% endif %}
+
+          {% if generated_code %}
+          <div class="code-preview-area">
+            <div class="code-preview-header">
+              <span class="code-preview-title">{{ code_download_name }}</span>
+              <div class="code-actions">
+                <button class="code-action-btn" onclick="copyCode()">复制代码</button>
+                <a class="code-action-btn download" href="{{ code_download_url }}">下载 .py</a>
+              </div>
+            </div>
+            <div class="code-block">
+              <pre id="codeContent">{{ generated_code }}</pre>
+            </div>
+          </div>
+
+          {% if has_project_context and recommended_path %}
+          <div class="integration-section">
+            <div class="integration-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10 9 9 9 8 9"/>
+              </svg>
+              集成指南
+            </div>
+            {% if recommended_path %}
+            <div class="integration-subtitle">建议文件路径：</div>
+            <div class="integration-path">{{ recommended_path }}</div>
+            {% endif %}
+            {% if integration_instructions %}
+            <div class="integration-subtitle">集成步骤：</div>
+            <ol class="integration-list">
+              {% for instruction in integration_instructions %}
+              <li>{{ instruction }}</li>
+              {% endfor %}
+            </ol>
+            {% endif %}
+            {% if imports_to_add %}
+            <div class="integration-subtitle">需要添加的导入：</div>
+            <div class="integration-imports">
+              {% for imp in imports_to_add %}
+              <div>{{ imp }}</div>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+          {% endif %}
+
+          {% endif %}
+        </div>
+
+        <form method="post" action="/generate-code" enctype="multipart/form-data" id="codeForm">
+          <div class="input-area">
+            <div class="text-input-container">
+              <div class="code-input-section">
+                <div class="code-input-row">
+                  <div class="field">
+                    <label>页面URL</label>
+                    <input type="text" name="page_url" id="pageUrl" placeholder="https://example.com/login" value="">
+                  </div>
+                  <div class="field">
+                    <label>页面名称</label>
+                    <input type="text" name="page_name" id="pageName" placeholder="login（用于命名测试类）" value="">
+                  </div>
+                </div>
+              </div>
+
+              <textarea
+                class="text-input"
+                name="code_description"
+                id="codeDescription"
+                placeholder="请输入页面描述或补充说明，可直接 Ctrl+V 粘贴截图...例如：登录页面包含用户名、密码输入框和登录按钮..."
+                rows="3"
+              >{{ code_description if code_description else '' }}</textarea>
+              <div style="font-size: 12px; color: #9ca3af; margin-top: 4px; margin-bottom: 8px;">
+                提示：可在上方文本框直接粘贴截图，图片会自动添加到下方预览区；也可点击按钮上传截图文件
+              </div>
+
+              <div class="file-upload-area">
+                <label class="upload-btn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                  </svg>
+                  上传截图
+                  <input type="file" name="code_image_files" class="file-input" id="codeImgInput" multiple accept=".png,.jpg,.jpeg,.bmp,.webp,.tiff" onchange="handleCodeFiles(this)">
+                </label>
+                <div class="loading" id="codeLoading">
+                  <div class="spinner"></div>
+                  <span>正在分析截图并生成代码...</span>
+                </div>
+              </div>
+
+              <div class="preview-area" id="codePreviewArea"></div>
+
+              <div class="project-upload-section">
+                <div class="project-upload-title">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                  </svg>
+                  导入已有项目（可选）
+                </div>
+                <div class="project-upload-desc">
+                  输入本地项目文件夹路径，生成的代码将自动适配项目的目录结构、命名规范和代码风格。
+                </div>
+                <div class="project-path-row">
+                  <input type="text" name="project_path" id="projectPathInput"
+                         placeholder="输入项目路径，如 /home/user/my-playwright-project"
+                         value="{{ project_path if project_path else '' }}">
+                  <button type="button" class="browse-btn" onclick="showBrowseModal()">浏览</button>
+                  <label class="upload-btn" style="white-space:nowrap;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="17 8 12 3 7 8"/>
+                      <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    或上传 .zip
+                    <input type="file" name="project_zip_file" class="file-input" id="projectZipInput"
+                           accept=".zip" onchange="handleProjectZip(this)">
+                  </label>
+                </div>
+                <div id="projectFileInfo" class="project-file-info" style="display:none;">
+                  <span id="projectFileText"></span>
+                  <span class="remove-project" onclick="clearProjectFiles()" title="清除">&times;</span>
+                </div>
+              </div>
+
+              <div class="settings-row">
+                <div class="setting-item">
+                  <label>生成模式</label>
+                  <select name="code_generation_mode" id="codeGenerationMode">
+                    <option value="template">模板生成（无需LLM）</option>
+                    <option value="smart">智能生成（LLM）</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="llm-status {% if llm_available %}available{% else %}unavailable{% endif %}">
+                {% if llm_available %}
+                LLM已配置，可使用智能生成模式
+                {% else %}
+                LLM未配置，仅支持模板生成模式
+                {% endif %}
+              </div>
+            </div>
+
+            <button class="submit-btn" type="submit" id="codeSubmitBtn">生成代码</button>
+          </div>
+        </form>
+      </div><!-- end tabCode -->
+    </div><!-- end chat-container -->
 
     <!-- 知识库管理弹窗 -->
     <div class="kb-modal" id="kbModal">
       <div class="kb-modal-content">
         <div class="kb-modal-header">
-          <h2>📚 知识库管理</h2>
-          <button class="kb-modal-close" onclick="hideKnowledgeModal()">×</button>
+          <h2>知识库管理</h2>
+          <button class="kb-modal-close" onclick="hideKnowledgeModal()">&times;</button>
         </div>
         <div class="kb-modal-body">
           <div class="kb-add-project">
@@ -748,7 +1355,6 @@
             <button onclick="createProject()">创建项目</button>
           </div>
           <div class="kb-project-list" id="kbProjectList">
-            <!-- 项目列表将通过 JS 加载 -->
           </div>
           <div class="kb-doc-section" id="kbDocSection" style="display:none;">
             <h3 id="kbDocTitle">文档列表</h3>
@@ -775,7 +1381,43 @@
       </div>
     </div>
 
+    <!-- 文件夹浏览弹窗 -->
+    <div class="kb-modal" id="browseModal">
+      <div class="kb-modal-content">
+        <div class="kb-modal-header">
+          <h2>选择项目文件夹</h2>
+          <button class="kb-modal-close" onclick="hideBrowseModal()">&times;</button>
+        </div>
+        <div class="kb-modal-body">
+          <div class="browse-path-bar">
+            <input type="text" id="browsePathInput" placeholder="输入路径..."
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();navigateTo(this.value);}">
+            <button type="button" onclick="navigateTo(document.getElementById('browsePathInput').value)">前往</button>
+          </div>
+          <div class="browse-dir-list" id="browseDirList"></div>
+          <div class="browse-actions">
+            <button type="button" class="browse-cancel" onclick="hideBrowseModal()">取消</button>
+            <button type="button" class="browse-select" onclick="selectBrowsedFolder()">选择此文件夹</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script>
+      // ========== Tab 切换 ==========
+      function switchTab(tab) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        if (tab === 'code') {
+          document.querySelectorAll('.tab-btn')[1].classList.add('active');
+          document.getElementById('tabCode').classList.add('active');
+        } else {
+          document.querySelectorAll('.tab-btn')[0].classList.add('active');
+          document.getElementById('tabCases').classList.add('active');
+        }
+      }
+
+      // ========== 用例生成 Tab ==========
       const submitBtn = document.getElementById('submitBtn');
       const loading = document.getElementById('loading');
       const mainForm = document.getElementById('mainForm');
@@ -792,15 +1434,16 @@
           if (item.type.startsWith('image/')) {
             e.preventDefault();
             const file = item.getAsFile();
-            addPastedImage(file);
+            addPastedImage(file, 'previewArea', uploadedFiles);
           }
         }
       });
 
-      function addPastedImage(file) {
+      function addPastedImage(file, containerId, filesArray) {
         const id = Date.now() + Math.random();
-        uploadedFiles.push({ id, file, type: 'img' });
+        filesArray.push({ id, file, type: 'img' });
 
+        const container = document.getElementById(containerId);
         const item = document.createElement('div');
         item.className = 'preview-item image';
         item.dataset.id = id;
@@ -811,14 +1454,15 @@
 
         const removeBtn = document.createElement('span');
         removeBtn.className = 'remove-btn';
-        removeBtn.innerHTML = '×';
+        removeBtn.innerHTML = '&times;';
         removeBtn.onclick = function() {
-          uploadedFiles = uploadedFiles.filter(f => f.id !== id);
+          const idx = filesArray.findIndex(f => f.id === id);
+          if (idx !== -1) filesArray.splice(idx, 1);
           item.remove();
         };
         item.appendChild(removeBtn);
 
-        previewArea.appendChild(item);
+        container.appendChild(item);
       }
 
       function handleFiles(input, type) {
@@ -841,14 +1485,14 @@
 
           const removeBtn = document.createElement('span');
           removeBtn.className = 'remove-btn';
-          removeBtn.innerHTML = '×';
+          removeBtn.innerHTML = '&times;';
           removeBtn.onclick = function() {
             uploadedFiles = uploadedFiles.filter(f => f.id !== id);
             item.remove();
           };
           item.appendChild(removeBtn);
 
-          previewArea.appendChild(item);
+          document.getElementById('previewArea').appendChild(item);
         }
         input.value = '';
       }
@@ -909,6 +1553,190 @@
           loading.classList.remove('active');
         });
       };
+
+      // ========== 代码生成 Tab ==========
+      let codeUploadedFiles = [];
+      const codeDescription = document.getElementById('codeDescription');
+
+      // Paste support for code tab textarea
+      codeDescription.addEventListener('paste', function(e) {
+        const items = e.clipboardData.items;
+        for (let item of items) {
+          if (item.type.startsWith('image/')) {
+            e.preventDefault();
+            const file = item.getAsFile();
+            addPastedImage(file, 'codePreviewArea', codeUploadedFiles);
+          }
+        }
+      });
+
+      function handleCodeFiles(input) {
+        const files = input.files;
+        for (let file of files) {
+          const id = Date.now() + Math.random();
+          codeUploadedFiles.push({ id, file, type: 'img' });
+
+          const item = document.createElement('div');
+          item.className = 'preview-item image';
+          item.dataset.id = id;
+
+          const img = document.createElement('img');
+          img.src = URL.createObjectURL(file);
+          item.appendChild(img);
+
+          const removeBtn = document.createElement('span');
+          removeBtn.className = 'remove-btn';
+          removeBtn.innerHTML = '&times;';
+          removeBtn.onclick = function() {
+            codeUploadedFiles = codeUploadedFiles.filter(f => f.id !== id);
+            item.remove();
+          };
+          item.appendChild(removeBtn);
+
+          document.getElementById('codePreviewArea').appendChild(item);
+        }
+        input.value = '';
+      }
+
+      // ========== 文件夹浏览弹窗 ==========
+      let browseCurrentPath = '';
+
+      function showBrowseModal() {
+        const existing = document.getElementById('projectPathInput').value.trim();
+        const startPath = existing || '';
+        document.getElementById('browseModal').classList.add('active');
+        navigateTo(startPath);
+      }
+
+      function hideBrowseModal() {
+        document.getElementById('browseModal').classList.remove('active');
+      }
+
+      function navigateTo(path) {
+        const list = document.getElementById('browseDirList');
+        list.innerHTML = '<div class="browse-dir-empty">加载中...</div>';
+
+        const url = '/api/browse' + (path ? '?path=' + encodeURIComponent(path) : '');
+        fetch(url)
+          .then(r => r.json())
+          .then(data => {
+            if (data.error) {
+              list.innerHTML = '<div class="browse-error">' + data.error + '</div>';
+              return;
+            }
+            browseCurrentPath = data.current_path;
+            document.getElementById('browsePathInput').value = data.current_path;
+
+            let html = '';
+            if (data.parent_path) {
+              html += '<div class="browse-dir-item parent-dir" onclick="navigateTo(\'' +
+                data.parent_path.replace(/'/g, "\\'") + '\')">' +
+                '⬆ 上级目录</div>';
+            }
+            if (data.directories.length === 0 && !data.parent_path) {
+              html += '<div class="browse-dir-empty">此目录为空</div>';
+            } else if (data.directories.length === 0) {
+              html += '<div class="browse-dir-empty">没有子目录</div>';
+            } else {
+              data.directories.forEach(function(d) {
+                html += '<div class="browse-dir-item" onclick="navigateTo(\'' +
+                  d.path.replace(/'/g, "\\'") + '\')">' +
+                  '📁 ' + d.name + '</div>';
+              });
+            }
+            list.innerHTML = html;
+          })
+          .catch(function() {
+            list.innerHTML = '<div class="browse-error">无法访问该路径</div>';
+          });
+      }
+
+      function selectBrowsedFolder() {
+        if (browseCurrentPath) {
+          document.getElementById('projectPathInput').value = browseCurrentPath;
+        }
+        hideBrowseModal();
+      }
+
+      // ========== Project Upload Handling ==========
+      function handleProjectZip(input) {
+        const file = input.files[0];
+        if (!file) return;
+        document.getElementById('projectPathInput').value = '';
+        const info = document.getElementById('projectFileInfo');
+        info.style.display = 'flex';
+        document.getElementById('projectFileText').textContent =
+          '项目包: ' + file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+      }
+
+      function clearProjectFiles() {
+        document.getElementById('projectZipInput').value = '';
+        document.getElementById('projectPathInput').value = '';
+        document.getElementById('projectFileInfo').style.display = 'none';
+        document.getElementById('projectFileText').textContent = '';
+      }
+
+      const codeForm = document.getElementById('codeForm');
+      const codeSubmitBtn = document.getElementById('codeSubmitBtn');
+      const codeLoading = document.getElementById('codeLoading');
+
+      codeForm.onsubmit = function(e) {
+        e.preventDefault();
+        codeSubmitBtn.disabled = true;
+        codeLoading.classList.add('active');
+
+        const formData = new FormData();
+        formData.append('page_url', document.getElementById('pageUrl').value);
+        formData.append('page_name', document.getElementById('pageName').value);
+        formData.append('code_description', document.getElementById('codeDescription').value);
+        formData.append('code_generation_mode', document.getElementById('codeGenerationMode').value);
+
+        const codeImgInput = document.getElementById('codeImgInput');
+        if (codeImgInput.files.length > 0) {
+          for (let file of codeImgInput.files) {
+            formData.append('code_image_files', file);
+          }
+        }
+
+        codeUploadedFiles.forEach(function(item, index) {
+          formData.append('code_pasted_images', item.file, 'pasted_code_img_' + index + '.png');
+        });
+
+        const projectZipInput = document.getElementById('projectZipInput');
+        if (projectZipInput.files.length > 0) {
+          formData.append('project_zip_file', projectZipInput.files[0]);
+        }
+
+        const projectPath = document.getElementById('projectPathInput').value.trim();
+        if (projectPath) {
+          formData.append('project_path', projectPath);
+        }
+
+        fetch('/generate-code', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.text())
+        .then(html => {
+          document.open();
+          document.write(html);
+          document.close();
+        })
+        .catch(error => {
+          alert('代码生成失败：' + error);
+          codeSubmitBtn.disabled = false;
+          codeLoading.classList.remove('active');
+        });
+      };
+
+      function copyCode() {
+        const code = document.getElementById('codeContent').textContent;
+        navigator.clipboard.writeText(code).then(function() {
+          const btn = document.querySelector('.code-action-btn');
+          btn.textContent = '已复制';
+          setTimeout(function() { btn.textContent = '复制代码'; }, 2000);
+        });
+      }
 
       // ========== 知识库管理函数 ==========
       let currentProjectId = '';

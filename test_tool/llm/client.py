@@ -98,6 +98,28 @@ class LLMClient:
 
         return json.loads(cleaned)
 
+    def generate_with_images(
+        self,
+        prompt: str,
+        image_paths: list,
+        system_prompt: Optional[str] = None,
+        **kwargs
+    ) -> str:
+        """多模态生成：支持图片输入"""
+        provider = self._get_provider()
+        response = provider.generate_with_images(
+            model=self.config.model_name,
+            prompt=prompt,
+            image_paths=image_paths,
+            system_prompt=system_prompt,
+            api_key=self.config.api_key,
+            base_url=self.config.base_url,
+            max_tokens=kwargs.get("max_tokens", self.config.max_tokens),
+            temperature=kwargs.get("temperature", self.config.temperature),
+            timeout=self.config.timeout_seconds,
+        )
+        return response
+
     def clear_cache(self):
         """清除缓存"""
         self._cache.clear()

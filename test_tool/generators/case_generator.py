@@ -638,8 +638,11 @@ def _generate_with_template(
     min_cases: int,
     cfg: GenerationConfig,
 ) -> List[TestCase]:
-    """使用模板方式生成用例（原有逻辑）。"""
+    """使用模板方式生成用例（原有逻辑 + 视觉增强）。"""
+    from ..ocr.multimodal_vision import MultimodalVisionAnalyzer
+
     all_cases: List[TestCase] = []
+    image_paths: List[Path] = []
 
     for one_file in _iter_supported_files(path):
         logger.info("Processing file: " + str(one_file))
@@ -649,6 +652,7 @@ def _generate_with_template(
             ui_cases = generate_ui_element_test_cases(ui_result, cfg)
             all_cases.extend(ui_cases)
             logger.info("Generated " + str(len(ui_cases)) + " UI element test cases from " + str(one_file))
+            image_paths.append(one_file)
 
         text = extract_text_from_file(one_file)
         if text.strip():
@@ -657,6 +661,36 @@ def _generate_with_template(
             all_cases.extend(file_cases)
             logger.info("Generated " + str(len(file_cases)) + " test cases from text in " + str(one_file))
 
+    if image_paths and cfg.llm_config.api_key:
+        try:
+            from ..llm.client import LLMClient, LLMConfig
+
+            llm_config = LLMConfig(
+                provider=cfg.llm_config.provider,
+                model_name=cfg.llm_config.model_name,
+                api_key=cfg.llm_config.api_key,
+                base_url=cfg.llm_config.base_url,
+            )
+            llm_client = LLMClient(llm_config)
+            vision_analyzer = MultimodalVisionAnalyzer(llm_client=llm_client)
+
+            for img_path in image_paths:
+                try:
+                    vision_result = vision_analyzer.extract_test_points(
+                        img_path, module_name=img_path.stem,
+                    )
+                    vision_cases = _generate_cases_from_vision_test_points(
+                        vision_result, cfg,
+                    )
+                    all_cases.extend(vision_cases)
+                    logger.info(
+                        f"Generated {len(vision_cases)} cases from vision test points of {img_path.name}"
+                    )
+                except Exception as exc:
+                    logger.warning(f"Vision test point extraction failed for {img_path.name}: {exc}")
+        except Exception as exc:
+            logger.warning(f"Vision enhancement not available: {exc}")
+
     all_cases = expand_to_min_cases(all_cases, min_cases=min_cases)
 
     for i, c in enumerate(all_cases, start=1):
@@ -664,6 +698,88 @@ def _generate_with_template(
 
     logger.info("Total test cases generated: " + str(len(all_cases)))
     return all_cases
+
+
+def _generate_cases_from_vision_test_points(
+    test_points,
+    cfg: GenerationConfig,
+) -> List[TestCase]:
+    """从视觉分析提取的测试点生成测试用例"""
+    from .test_point_analyzer import TestPoint
+    from .smart_generator import SmartCaseGenerator, GenerationContext
+    from ..llm.client import LLMClient, LLMConfig
+
+    if not test_points:
+        return []
+
+    if not cfg.llm_config.api_key:
+        return _generate_cases_from_vision_test_points_template(test_points, cfg)
+
+    llm_config = LLMConfig(
+        provider=cfg.llm_config.provider,
+        model_name=cfg.llm_config.model_name,
+        api_key=cfg.llm_config.api_key,
+        base_url=cfg.llm_config.base_url,
+    )
+    llm_client = LLMClient(llm_config)
+    generator = SmartCaseGenerator(llm_client)
+
+    all_cases: List[TestCase] = []
+    for point in test_points:
+        context = GenerationContext(
+            module_name=point.module_name or point.related_requirement,
+            test_point=point,
+            requirement_context=point.ui_elements_context or point.related_requirement,
+            system_config=cfg,
+        )
+        cases = generator.generate_for_test_point(context)
+        all_cases.extend(cases)
+
+    return all_cases
+
+
+def _generate_cases_from_vision_test_points_template(
+    test_points,
+    cfg: GenerationConfig,
+) -> List[TestCase]:
+    """从视觉测试点用模板方式生成用例（无需LLM）"""
+    cases: List[TestCase] = []
+    temp_index = 1
+
+    for point in test_points:
+        module_name = point.module_name or "UI界面"
+        feature_points = [point.point_name]
+        pre = _build_simple_preconditions()
+
+        for fp in feature_points:
+            action = classify_action(fp, module_name)
+            scenarios = _get_scenarios_for_action(action)
+
+            for scene_name, process_template, expected_template, case_type_override, _ in scenarios:
+                process = process_template.replace("{point}", fp).replace("{module}", module_name)
+                expected = expected_template.replace("{point}", fp)
+
+                if point.ui_elements_context:
+                    process = "1. 在【" + point.ui_elements_context + "】中，\n" + process.replace("1. ", "2. ")
+
+                ct = case_type_override if case_type_override else "功能测试"
+                acceptance = "验证" + fp + "在" + scene_name + "场景下功能正确。"
+
+                cases.append(_build_case(
+                    module_name=module_name,
+                    point=fp,
+                    index=temp_index,
+                    scene_name=scene_name,
+                    acceptance=acceptance,
+                    pre=pre,
+                    process=process,
+                    expected=expected,
+                    case_type=ct,
+                    priority=point.priority,
+                ))
+                temp_index += 1
+
+    return cases
 
 
 def generate_with_llm(
@@ -684,6 +800,7 @@ def generate_with_llm(
     from ..llm.config_loader import load_llm_config_from_env
     from .test_point_analyzer import TestPointAnalyzer
     from .smart_generator import SmartCaseGenerator
+    from ..ocr.multimodal_vision import MultimodalVisionAnalyzer
 
     llm_config = LLMConfig(
         provider=cfg.llm_config.provider,
@@ -708,6 +825,7 @@ def generate_with_llm(
 
     all_sections: List[RequirementSection] = []
     ui_results: dict[str, UIAnalysisResult] = {}
+    image_paths: List[Path] = []
 
     for one_file in _iter_supported_files(path):
         logger.info("Processing file for LLM: " + str(one_file))
@@ -715,23 +833,48 @@ def generate_with_llm(
         if is_image_file(one_file):
             ui_result = analyze_ui_image(one_file)
             ui_results[one_file.stem] = ui_result
+            image_paths.append(one_file)
 
         text = extract_text_from_file(one_file)
         if text.strip():
             sections = parse_headings(text)
             all_sections.extend(sections)
 
-    if not all_sections:
-        logger.warning("No requirement sections found")
+    vision_test_points = []
+    if image_paths and llm_client:
+        vision_analyzer = MultimodalVisionAnalyzer(llm_client=llm_client)
+        for img_path in image_paths:
+            module_name = img_path.stem
+            try:
+                v_points = vision_analyzer.extract_test_points(
+                    img_path, module_name=module_name,
+                )
+                vision_test_points.extend(v_points)
+                logger.info(
+                    f"Extracted {len(v_points)} test points from vision analysis of {img_path.name}"
+                )
+            except Exception as exc:
+                logger.warning(f"Vision test point extraction failed for {img_path.name}: {exc}")
+
+    if not all_sections and not vision_test_points:
+        logger.warning("No requirement sections or vision test points found")
         return []
 
-    analyzer = TestPointAnalyzer(llm_client)
-    test_points, module_analyses = analyzer.analyze_all_sections(all_sections, ui_results)
+    text_test_points = []
+    module_analyses: dict = {}
+    if all_sections:
+        analyzer = TestPointAnalyzer(llm_client)
+        text_test_points, module_analyses = analyzer.analyze_all_sections(
+            all_sections, ui_results
+        )
+        logger.info(f"Analyzed {len(text_test_points)} text test points")
 
-    logger.info(f"Analyzed {len(test_points)} test points")
+    all_test_points = _merge_test_points(text_test_points, vision_test_points)
+
+    logger.info(f"Total test points after merge: {len(all_test_points)}")
 
     generator = SmartCaseGenerator(llm_client)
-    cases = generator.generate_for_all_points(test_points, all_sections, cfg, module_analyses, project_id)
+    cases = generator.generate_for_all_points(all_test_points, all_sections, cfg, module_analyses, project_id)
 
     if len(cases) < min_cases:
         logger.info(f"Generated {len(cases)} cases, below minimum {min_cases}")
@@ -743,3 +886,23 @@ def generate_with_llm(
 
     logger.info("Total test cases generated with LLM: " + str(len(cases)))
     return cases
+
+
+def _merge_test_points(text_points, vision_points):
+    """合并文本测试点和视觉测试点，去除重复"""
+    seen_signatures = set()
+    merged = []
+
+    for point in text_points:
+        sig = f"{point.point_name}:{point.category}".lower().strip()
+        if sig not in seen_signatures:
+            seen_signatures.add(sig)
+            merged.append(point)
+
+    for point in vision_points:
+        sig = f"{point.point_name}:{point.category}".lower().strip()
+        if sig not in seen_signatures:
+            seen_signatures.add(sig)
+            merged.append(point)
+
+    return merged
