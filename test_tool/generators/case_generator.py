@@ -817,6 +817,10 @@ def generate_with_llm(
         base_url=cfg.llm_config.base_url,
         max_tokens=cfg.llm_config.max_tokens,
         temperature=cfg.llm_config.temperature,
+        vision_provider=getattr(cfg.llm_config, 'vision_provider', None),
+        vision_model_name=getattr(cfg.llm_config, 'vision_model_name', None),
+        vision_api_key=getattr(cfg.llm_config, 'vision_api_key', None),
+        vision_base_url=getattr(cfg.llm_config, 'vision_base_url', None),
     )
 
     if not llm_config.api_key:
@@ -868,17 +872,6 @@ def generate_with_llm(
                     logger.warning(f"Vision test point extraction failed for {img_path.name}: {exc}")
         else:
             logger.info("No vision model configured, skipping vision-based test point extraction")
-            for img_path in image_paths:
-                try:
-                    from ..ocr.multimodal_vision import MultimodalVisionAnalyzer
-                    vision_analyzer = MultimodalVisionAnalyzer(llm_client=llm_client)
-                    v_points = vision_analyzer.extract_test_points(
-                        img_path, module_name=img_path.stem,
-                    )
-                    if v_points:
-                        vision_test_points.extend(v_points)
-                except Exception as exc:
-                    logger.info(f"Vision model does not support image input, using CV-only for {img_path.name}: {exc}")
 
     if not all_sections and not vision_test_points:
         logger.warning("No requirement sections or vision test points found")
