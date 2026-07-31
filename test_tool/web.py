@@ -63,8 +63,8 @@ def validate_upload_file(file) -> tuple[bool, str]:
 def index():
     llm_config = load_llm_config()
     llm_available = llm_config.api_key is not None and len(llm_config.api_key) > 10
+    vision_available = llm_config.has_vision_model
 
-    # 获取项目列表
     projects = []
     if HAS_KNOWLEDGE:
         try:
@@ -76,6 +76,7 @@ def index():
     return render_template(
         "index.html",
         llm_available=llm_available,
+        vision_available=vision_available,
         projects=projects,
         has_knowledge=HAS_KNOWLEDGE,
     )
@@ -188,6 +189,10 @@ def generate():
         base_url=llm_env_config.base_url,
         provider=llm_env_config.provider,
         model_name=llm_env_config.model_name,
+        vision_provider=llm_env_config.vision_provider,
+        vision_model_name=llm_env_config.vision_model_name,
+        vision_api_key=llm_env_config.vision_api_key,
+        vision_base_url=llm_env_config.vision_base_url,
     )
 
     cfg = GenerationConfig(
@@ -1087,8 +1092,8 @@ def main() -> None:
     setup_logging()
     UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
     OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
-    logger.info("Starting web server on http://127.0.0.1:5000")
-    app.run(host="127.0.0.1", port=5000, debug=False)
+    logger.info("Starting web server on http://0.0.0.0:5000")
+    app.run(host="0.0.0.0", port=5000, debug=False)
 
 
 if __name__ == "__main__":

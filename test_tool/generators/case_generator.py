@@ -670,24 +670,32 @@ def _generate_with_template(
                 model_name=cfg.llm_config.model_name,
                 api_key=cfg.llm_config.api_key,
                 base_url=cfg.llm_config.base_url,
+                vision_provider=getattr(cfg.llm_config, 'vision_provider', None),
+                vision_model_name=getattr(cfg.llm_config, 'vision_model_name', None),
+                vision_api_key=getattr(cfg.llm_config, 'vision_api_key', None),
+                vision_base_url=getattr(cfg.llm_config, 'vision_base_url', None),
             )
-            llm_client = LLMClient(llm_config)
-            vision_analyzer = MultimodalVisionAnalyzer(llm_client=llm_client)
 
-            for img_path in image_paths:
-                try:
-                    vision_result = vision_analyzer.extract_test_points(
-                        img_path, module_name=img_path.stem,
-                    )
-                    vision_cases = _generate_cases_from_vision_test_points(
-                        vision_result, cfg,
-                    )
-                    all_cases.extend(vision_cases)
-                    logger.info(
-                        f"Generated {len(vision_cases)} cases from vision test points of {img_path.name}"
-                    )
-                except Exception as exc:
-                    logger.warning(f"Vision test point extraction failed for {img_path.name}: {exc}")
+            if not llm_config.has_vision_model:
+                logger.info("No vision model configured, skipping vision analysis")
+            else:
+                llm_client = LLMClient(llm_config)
+                vision_analyzer = MultimodalVisionAnalyzer(llm_client=llm_client)
+
+                for img_path in image_paths:
+                    try:
+                        vision_result = vision_analyzer.extract_test_points(
+                            img_path, module_name=img_path.stem,
+                        )
+                        vision_cases = _generate_cases_from_vision_test_points(
+                            vision_result, cfg,
+                        )
+                        all_cases.extend(vision_cases)
+                        logger.info(
+                            f"Generated {len(vision_cases)} cases from vision test points of {img_path.name}"
+                        )
+                    except Exception as exc:
+                        logger.warning(f"Vision test point extraction failed for {img_path.name}: {exc}")
         except Exception as exc:
             logger.warning(f"Vision enhancement not available: {exc}")
 
@@ -842,19 +850,35 @@ def generate_with_llm(
 
     vision_test_points = []
     if image_paths and llm_client:
-        vision_analyzer = MultimodalVisionAnalyzer(llm_client=llm_client)
-        for img_path in image_paths:
-            module_name = img_path.stem
-            try:
-                v_points = vision_analyzer.extract_test_points(
-                    img_path, module_name=module_name,
-                )
-                vision_test_points.extend(v_points)
-                logger.info(
-                    f"Extracted {len(v_points)} test points from vision analysis of {img_path.name}"
-                )
-            except Exception as exc:
-                logger.warning(f"Vision test point extraction failed for {img_path.name}: {exc}")
+        vision_config = llm_config.get_vision_config()
+        if llm_config.has_vision_model:
+            vision_llm_client = LLMClient(vision_config)
+            vision_analyzer = MultimodalVisionAnalyzer(llm_client=vision_llm_client)
+            for img_path in image_paths:
+                module_name = img_path.stem
+                try:
+                    v_points = vision_analyzer.extract_test_points(
+                        img_path, module_name=module_name,
+                    )
+                    vision_test_points.extend(v_points)
+                    logger.info(
+                        f"Extracted {len(v_points)} test points from vision analysis of {img_path.name}"
+                    )
+                except Exception as exc:
+                    logger.warning(f"Vision test point extraction failed for {img_path.name}: {exc}")
+        else:
+            logger.info("No vision model configured, skipping vision-based test point extraction")
+            for img_path in image_paths:
+                try:
+                    from ..ocr.multimodal_vision import MultimodalVisionAnalyzer
+                    vision_analyzer = MultimodalVisionAnalyzer(llm_client=llm_client)
+                    v_points = vision_analyzer.extract_test_points(
+                        img_path, module_name=img_path.stem,
+                    )
+                    if v_points:
+                        vision_test_points.extend(v_points)
+                except Exception as exc:
+                    logger.info(f"Vision model does not support image input, using CV-only for {img_path.name}: {exc}")
 
     if not all_sections and not vision_test_points:
         logger.warning("No requirement sections or vision test points found")

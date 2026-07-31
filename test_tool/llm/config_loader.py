@@ -47,6 +47,10 @@ def load_llm_config_from_file(config_path: Optional[Path] = None) -> Optional[LL
                 base_url=data.get("base_url"),
                 max_tokens=int(data.get("max_tokens", 4096)),
                 temperature=float(data.get("temperature", 0.7)),
+                vision_provider=data.get("vision_provider"),
+                vision_model_name=data.get("vision_model_name"),
+                vision_api_key=data.get("vision_api_key"),
+                vision_base_url=data.get("vision_base_url"),
             )
 
         elif config_path.name == ".env":

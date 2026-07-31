@@ -1142,7 +1142,7 @@
 
               <div class="llm-status {% if llm_available %}available{% else %}unavailable{% endif %}">
                 {% if llm_available %}
-                LLM已配置，可使用智能生成
+                LLM已配置，可使用智能生成模式{% if vision_available %}（含UI截图识别）{% endif %}
                 {% else %}
                 LLM未配置，请设置环境变量 <code>LLM_API_KEY</code>（<a href="https://platform.deepseek.com/api_keys" target="_blank">获取DeepSeek API Key</a>）
                 {% endif %}

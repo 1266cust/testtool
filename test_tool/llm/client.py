@@ -23,6 +23,32 @@ class LLMConfig:
     enable_cache: bool = True
     cache_ttl_seconds: int = 3600
 
+    vision_provider: Optional[str] = None
+    vision_model_name: Optional[str] = None
+    vision_api_key: Optional[str] = None
+    vision_base_url: Optional[str] = None
+
+    @property
+    def has_vision_model(self) -> bool:
+        return bool(self.vision_provider and self.vision_model_name and self.vision_api_key)
+
+    def get_vision_config(self) -> "LLMConfig":
+        """获取视觉模型配置（如果有独立配置），否则返回自身"""
+        if self.has_vision_model:
+            return LLMConfig(
+                provider=self.vision_provider,
+                model_name=self.vision_model_name,
+                api_key=self.vision_api_key,
+                base_url=self.vision_base_url,
+                max_tokens=self.max_tokens,
+                temperature=self.temperature,
+                timeout_seconds=self.timeout_seconds,
+                retry_count=self.retry_count,
+                enable_cache=self.enable_cache,
+                cache_ttl_seconds=self.cache_ttl_seconds,
+            )
+        return self
+
 
 class LLMClient:
     """LLM客户端统一封装"""
@@ -105,18 +131,19 @@ class LLMClient:
         system_prompt: Optional[str] = None,
         **kwargs
     ) -> str:
-        """多模态生成：支持图片输入"""
-        provider = self._get_provider()
+        """多模态生成：支持图片输入，自动使用视觉模型配置"""
+        vision_config = self.config.get_vision_config()
+        provider = get_provider(vision_config.provider)
         response = provider.generate_with_images(
-            model=self.config.model_name,
+            model=vision_config.model_name,
             prompt=prompt,
             image_paths=image_paths,
             system_prompt=system_prompt,
-            api_key=self.config.api_key,
-            base_url=self.config.base_url,
-            max_tokens=kwargs.get("max_tokens", self.config.max_tokens),
-            temperature=kwargs.get("temperature", self.config.temperature),
-            timeout=self.config.timeout_seconds,
+            api_key=vision_config.api_key,
+            base_url=vision_config.base_url,
+            max_tokens=kwargs.get("max_tokens", vision_config.max_tokens),
+            temperature=kwargs.get("temperature", vision_config.temperature),
+            timeout=vision_config.timeout_seconds,
         )
         return response
 

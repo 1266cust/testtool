@@ -22,6 +22,15 @@ class LLMGenerationConfig:
 
     max_cases_per_point: int = 5
 
+    vision_provider: Optional[str] = None
+    vision_model_name: Optional[str] = None
+    vision_api_key: Optional[str] = None
+    vision_base_url: Optional[str] = None
+
+    @property
+    def has_vision_model(self) -> bool:
+        return bool(self.vision_provider and self.vision_model_name and self.vision_api_key)
+
 
 @dataclass
 class GenerationConfig:
