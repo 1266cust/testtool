@@ -1631,11 +1631,44 @@
         }
         navigator.clipboard.writeText(text).then(function() {
           var btn = document.getElementById('copyCasesBtn');
-          btn.textContent = '已复制 ' + streamCases.length + ' 条';
-          setTimeout(function() { btn.textContent = '复制用例文本'; }, 2000);
+          if (btn) btn.textContent = '已复制 ' + streamCases.length + ' 条';
+          setTimeout(function() { if (btn) btn.textContent = '复制用例文本'; }, 2000);
         }).catch(function() {
           alert('复制失败');
         });
+      }
+
+      function showStreamComplete(data) {
+        var doneDiv = document.getElementById('streamDone');
+        var msg = data.message || (data.cases_count || 0) + ' 条测试用例已生成。';
+        var html = '<div class="message-content result-area"><div class="result-title">' + msg + '</div>';
+
+        if (streamCases.length > 0) {
+          html += '<div style="margin-bottom:10px;"><button class="code-action-btn" onclick="copyStreamCases()" id="copyCasesBtn">复制用例文本</button></div>';
+          html += '<div style="max-height:300px; overflow-y:auto; font-size:12px; line-height:1.6; background:#f9fafb; padding:10px; border-radius:8px; white-space:pre-wrap; font-family:monospace;" id="streamCasesText">';
+          for (var i = 0; i < streamCases.length; i++) {
+            var c = streamCases[i];
+            html += (c.case_id || '') + '\t' + (c.module || '') + '\t' + (c.name || '') + '\n';
+          }
+          html += '</div>';
+        }
+
+        if (data.downloads && data.downloads.length > 0) {
+          html += '<div class="download-links" style="margin-top:10px;">';
+          for (var i = 0; i < data.downloads.length; i++) {
+            html += '<a class="download-link" href="' + data.downloads[i].url + '">' +
+              '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+              '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>' +
+              '<polyline points="7 10 12 15 17 10"></polyline>' +
+              '<line x1="12" y1="15" x2="12" y2="3"></line></svg> ' +
+              data.downloads[i].name + '</a>';
+          }
+          html += '</div>';
+        }
+        html += '</div>';
+        doneDiv.innerHTML = html;
+        doneDiv.style.display = 'block';
+        submitBtn.disabled = false;
       }
 
       mainForm.onsubmit = function(e) {
@@ -1791,39 +1824,6 @@
               errDiv.style.display = 'block';
               submitBtn.disabled = false;
             }
-          }
-
-          function showStreamComplete(data) {
-            var doneDiv = document.getElementById('streamDone');
-            var msg = data.message || data.cases_count + ' 条测试用例已生成。';
-            var html = '<div class="message-content result-area"><div class="result-title">' + msg + '</div>';
-
-            if (streamCases.length > 0) {
-              html += '<div style="margin-bottom:10px;"><button class="code-action-btn" onclick="copyStreamCases()" id="copyCasesBtn">复制用例文本</button></div>';
-              html += '<div style="max-height:300px; overflow-y:auto; font-size:12px; line-height:1.6; background:#f9fafb; padding:10px; border-radius:8px; white-space:pre-wrap; font-family:monospace;" id="streamCasesText">';
-              for (var i = 0; i < streamCases.length; i++) {
-                var c = streamCases[i];
-                html += (c.case_id || '') + '\t' + (c.module || '') + '\t' + (c.name || '') + '\n';
-              }
-              html += '</div>';
-            }
-
-            if (data.downloads && data.downloads.length > 0) {
-              html += '<div class="download-links" style="margin-top:10px;">';
-              for (var i = 0; i < data.downloads.length; i++) {
-                html += '<a class="download-link" href="' + data.downloads[i].url + '">' +
-                  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
-                  '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>' +
-                  '<polyline points="7 10 12 15 17 10"></polyline>' +
-                  '<line x1="12" y1="15" x2="12" y2="3"></line></svg> ' +
-                  data.downloads[i].name + '</a>';
-              }
-              html += '</div>';
-            }
-            html += '</div>';
-            doneDiv.innerHTML = html;
-            doneDiv.style.display = 'block';
-            submitBtn.disabled = false;
           }
 
           readStream();
