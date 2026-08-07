@@ -520,7 +520,7 @@ def generate_stream():
             # 立即发送 job_id，让前端能立即取消
             yield format_sse("start", {"job_id": job_id})
 
-            if state.cancelled:
+            if state.is_cancelled():
                 yield format_sse("cancelled", {"job_id": job_id, "cases_count": 0, "message": "生成已取消"})
                 return
 
@@ -529,7 +529,7 @@ def generate_stream():
             else:
                 cases = yield from streaming_generate_template(upload_dir, cfg, min_cases, state)
 
-            if state.cancelled:
+            if state.is_cancelled():
                 yield format_sse("cancelled", {
                     "job_id": job_id,
                     "cases_count": len(cases),
@@ -570,6 +570,13 @@ def generate_stream():
                 for p in export_paths:
                     download_items.append({"name": p.name, "url": f"/download/{job_id}/{p.name}"})
 
+            if state.is_cancelled():
+                yield format_sse("cancelled", {
+                    "job_id": job_id, "cases_count": len(cases),
+                    "message": "生成已取消",
+                })
+                return
+
             yield format_sse("complete", {
                 "job_id": job_id,
                 "cases_count": len(cases),
@@ -579,10 +586,11 @@ def generate_stream():
 
         except Exception as exc:
             logger.error(f"Streaming generation failed: {exc}")
-            yield format_sse("error", {
-                "job_id": job_id,
-                "error": f"生成失败：{str(exc)}",
-            })
+            if not state.is_cancelled():
+                yield format_sse("error", {
+                    "job_id": job_id,
+                    "error": f"生成失败：{str(exc)}",
+                })
         finally:
             from .generators.streaming import remove_state
             remove_state(job_id)

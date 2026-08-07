@@ -38,10 +38,24 @@ class GenerationState:
     _start_time: float = field(default_factory=time.time)
 
     CHECKPOINT_FILE = "partial_cases.jsonl"
+    CANCEL_FILE = ".cancelled"
 
     def cancel(self):
         self.cancelled = True
+        if self.output_dir:
+            try:
+                (self.output_dir / self.CANCEL_FILE).touch()
+            except Exception:
+                pass
         logger.info(f"Generation cancelled: {self.job_id}")
+
+    def is_cancelled(self) -> bool:
+        if self.cancelled:
+            return True
+        if self.output_dir and (self.output_dir / self.CANCEL_FILE).exists():
+            self.cancelled = True
+            return True
+        return False
 
     @property
     def elapsed(self) -> float:
@@ -160,7 +174,7 @@ def streaming_generate_template(
     total_files = sum(1 for _ in _iter_supported_files(path)) or 1
 
     for one_file in _iter_supported_files(path):
-        if state.cancelled:
+        if state.is_cancelled():
             yield format_sse("cancelled", {"job_id": state.job_id, "cases_count": len(all_cases)})
             return all_cases
 
@@ -199,7 +213,7 @@ def streaming_generate_template(
                     "phase": "template",
                 })
 
-    if state.cancelled:
+    if state.is_cancelled():
         yield format_sse("cancelled", {"job_id": state.job_id, "cases_count": len(all_cases)})
         return all_cases
 
@@ -272,7 +286,7 @@ def streaming_generate_llm(
     ui_results = {}
     image_paths = []
     for one_file in _iter_supported_files(path):
-        if state.cancelled:
+        if state.is_cancelled():
             yield format_sse("cancelled", {"job_id": state.job_id, "cases_count": 0})
             return []
         if is_image_file(one_file):
@@ -284,20 +298,20 @@ def streaming_generate_llm(
             sections = parse_headings(text)
             all_sections.extend(sections)
 
-    if state.cancelled:
+    if state.is_cancelled():
         yield format_sse("cancelled", {"job_id": state.job_id, "cases_count": 0})
         return []
 
     vision_test_points = []
     if image_paths and llm_config.has_vision_model:
-        if state.cancelled:
+        if state.is_cancelled():
             yield format_sse("cancelled", {"job_id": state.job_id, "cases_count": 0})
             return []
         from ..ocr.multimodal_vision import MultimodalVisionAnalyzer
         vision_llm_client = LLMClient(llm_config.get_vision_config())
         vision_analyzer = MultimodalVisionAnalyzer(llm_client=vision_llm_client)
         for img_path in image_paths:
-            if state.cancelled:
+            if state.is_cancelled():
                 yield format_sse("cancelled", {"job_id": state.job_id, "cases_count": 0})
                 return []
             yield format_sse("progress", {
@@ -343,7 +357,7 @@ def streaming_generate_llm(
     case_index = 1
 
     for idx, point in enumerate(all_test_points):
-        if state.cancelled:
+        if state.is_cancelled():
             yield format_sse("cancelled", {"job_id": state.job_id, "cases_count": len(all_cases)})
             return all_cases
 
@@ -385,7 +399,7 @@ def streaming_generate_llm(
 
         state.save_checkpoint(all_cases)
 
-    if state.cancelled:
+    if state.is_cancelled():
         yield format_sse("cancelled", {"job_id": state.job_id, "cases_count": len(all_cases)})
         return all_cases
 
