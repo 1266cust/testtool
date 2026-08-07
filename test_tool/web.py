@@ -517,7 +517,13 @@ def generate_stream():
 
     def generate():
         try:
-            stream = False
+            # 立即发送 job_id，让前端能立即取消
+            yield format_sse("start", {"job_id": job_id})
+
+            if state.cancelled:
+                yield format_sse("cancelled", {"job_id": job_id, "cases_count": 0, "message": "生成已取消"})
+                return
+
             if generation_mode == "smart" and llm_cfg.api_key:
                 cases = yield from streaming_generate_llm(upload_dir, cfg, min_cases, state)
             else:

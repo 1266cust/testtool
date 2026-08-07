@@ -1589,19 +1589,22 @@
 
       function cancelGeneration() {
         if (!currentJobId) return;
+        streamActive = false;
         document.getElementById('cancelBtn').disabled = true;
         document.getElementById('cancelBtn').textContent = '正在取消...';
+        submitBtn.disabled = false;
+        loading.classList.remove('active');
         fetch('/cancel-generation', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({job_id: currentJobId})
         }).catch(function() {});
         setTimeout(function() {
-          streamActive = false;
           document.getElementById('cancelBtn').style.display = 'none';
-          submitBtn.disabled = false;
-          loading.classList.remove('active');
-        }, 1500);
+          if (streamCases.length > 0) {
+            showStreamComplete({cases_count: streamCases.length, message: streamCases.length + ' 条用例已生成（已取消）'});
+          }
+        }, 500);
       }
 
       function copyStreamCases() {
@@ -1671,6 +1674,9 @@
 
           function readStream() {
             reader.read().then(function(result) {
+              if (!streamActive) {
+                return;
+              }
               if (result.done) {
                 streamActive = false;
                 document.getElementById('cancelBtn').style.display = 'none';
@@ -1713,7 +1719,9 @@
               var data = JSON.parse(eventData);
             } catch(e) { return; }
 
-            if (eventType === 'progress') {
+            if (eventType === 'start') {
+              currentJobId = data.job_id;
+            } else if (eventType === 'progress') {
               currentJobId = data.job_id;
               updateProgress(data.pct || 0, data.message || '生成中...');
               if (data.partial_cases) {

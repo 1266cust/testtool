@@ -139,18 +139,27 @@ class LLMClient:
             )
         vision_config = self.config.get_vision_config()
         provider = get_provider(vision_config.provider)
-        response = provider.generate_with_images(
-            model=vision_config.model_name,
-            prompt=prompt,
-            image_paths=image_paths,
-            system_prompt=system_prompt,
-            api_key=vision_config.api_key,
-            base_url=vision_config.base_url,
-            max_tokens=kwargs.get("max_tokens", vision_config.max_tokens),
-            temperature=kwargs.get("temperature", vision_config.temperature),
-            timeout=vision_config.timeout_seconds,
-        )
-        return response
+        try:
+            response = provider.generate_with_images(
+                model=vision_config.model_name,
+                prompt=prompt,
+                image_paths=image_paths,
+                system_prompt=system_prompt,
+                api_key=vision_config.api_key,
+                base_url=vision_config.base_url,
+                max_tokens=kwargs.get("max_tokens", vision_config.max_tokens),
+                temperature=kwargs.get("temperature", vision_config.temperature),
+                timeout=vision_config.timeout_seconds,
+            )
+            return response
+        except Exception as exc:
+            err_msg = str(exc)
+            if "does not support image input" in err_msg or "image" in err_msg.lower():
+                raise ValueError(
+                    f"配置的视觉模型 {vision_config.provider}/{vision_config.model_name} 不支持图片输入。"
+                    f"请更换为支持多模态的模型（如 gpt-4o、claude-3 等）。"
+                )
+            raise
 
     def clear_cache(self):
         """清除缓存"""
