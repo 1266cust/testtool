@@ -1596,6 +1596,27 @@
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({job_id: currentJobId})
         }).catch(function() {});
+        setTimeout(function() {
+          streamActive = false;
+          document.getElementById('cancelBtn').style.display = 'none';
+          submitBtn.disabled = false;
+          loading.classList.remove('active');
+        }, 1500);
+      }
+
+      function copyStreamCases() {
+        var text = '';
+        for (var i = 0; i < streamCases.length; i++) {
+          var c = streamCases[i];
+          text += (c.case_id || '') + '\t' + (c.module || '') + '\t' + (c.name || '') + '\n';
+        }
+        navigator.clipboard.writeText(text).then(function() {
+          var btn = document.getElementById('copyCasesBtn');
+          btn.textContent = '已复制 ' + streamCases.length + ' 条';
+          setTimeout(function() { btn.textContent = '复制用例文本'; }, 2000);
+        }).catch(function() {
+          alert('复制失败');
+        });
       }
 
       mainForm.onsubmit = function(e) {
@@ -1676,10 +1697,12 @@
             }).catch(function(err) {
               streamActive = false;
               document.getElementById('cancelBtn').style.display = 'none';
+              submitBtn.disabled = false;
+              loading.classList.remove('active');
               if (streamCases.length > 0) {
-                showStreamComplete(streamCases.length + ' 条用例已生成（网络中断前保留）');
+                showStreamComplete({cases_count: streamCases.length, message: streamCases.length + ' 条用例已生成（网络中断前保留）'});
               } else {
-                alert('连接中断：' + err);
+                updateProgress(0, '连接中断');
               }
               submitBtn.disabled = false;
             });
@@ -1709,11 +1732,15 @@
             } else if (eventType === 'complete') {
               streamActive = false;
               document.getElementById('cancelBtn').style.display = 'none';
+              submitBtn.disabled = false;
+              loading.classList.remove('active');
               updateProgress(100, data.message || '生成完成');
               showStreamComplete(data);
             } else if (eventType === 'cancelled') {
               streamActive = false;
               document.getElementById('cancelBtn').style.display = 'none';
+              submitBtn.disabled = false;
+              loading.classList.remove('active');
               updateProgress(0, '已取消');
               if (data.cases_count > 0) {
                 showStreamComplete(data.cases_count + ' 条用例已生成（已取消）');
@@ -1722,6 +1749,8 @@
             } else if (eventType === 'error') {
               streamActive = false;
               document.getElementById('cancelBtn').style.display = 'none';
+              submitBtn.disabled = false;
+              loading.classList.remove('active');
               updateProgress(0, '生成失败');
               var errDiv = document.getElementById('streamDone');
               errDiv.innerHTML = '<div class="message-content result-area error"><div class="result-title">生成失败</div><div>' + (data.error || '未知错误') + '</div></div>';
@@ -1734,8 +1763,19 @@
             var doneDiv = document.getElementById('streamDone');
             var msg = data.message || data.cases_count + ' 条测试用例已生成。';
             var html = '<div class="message-content result-area"><div class="result-title">' + msg + '</div>';
+
+            if (streamCases.length > 0) {
+              html += '<div style="margin-bottom:10px;"><button class="code-action-btn" onclick="copyStreamCases()" id="copyCasesBtn">复制用例文本</button></div>';
+              html += '<div style="max-height:300px; overflow-y:auto; font-size:12px; line-height:1.6; background:#f9fafb; padding:10px; border-radius:8px; white-space:pre-wrap; font-family:monospace;" id="streamCasesText">';
+              for (var i = 0; i < streamCases.length; i++) {
+                var c = streamCases[i];
+                html += (c.case_id || '') + '\t' + (c.module || '') + '\t' + (c.name || '') + '\n';
+              }
+              html += '</div>';
+            }
+
             if (data.downloads && data.downloads.length > 0) {
-              html += '<div class="download-links">';
+              html += '<div class="download-links" style="margin-top:10px;">';
               for (var i = 0; i < data.downloads.length; i++) {
                 html += '<a class="download-link" href="' + data.downloads[i].url + '">' +
                   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
