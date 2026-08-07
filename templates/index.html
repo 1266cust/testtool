@@ -1594,8 +1594,21 @@
         submitBtn.disabled = false;
         loading.classList.remove('active');
         loading.style.display = 'none';
+        document.getElementById('streamStatus').textContent = '已取消';
+        document.getElementById('progressFill').style.width = '0%';
+        document.getElementById('progressText').textContent = '';
+        var doneDiv = document.getElementById('streamDone');
+        doneDiv.style.display = 'none';
+        doneDiv.innerHTML = '';
         if (streamCases.length > 0) {
-          showStreamComplete({cases_count: streamCases.length, message: streamCases.length + ' 条用例已生成（已取消）'});
+          showStreamComplete({cases_count: streamCases.length, message: streamCases.length + ' 条测试用例已生成（已取消）'});
+        } else {
+          var msgDiv = document.getElementById('streamMessage');
+          var msg = '<div class="result-area" style="margin-top:8px;padding:12px;">' +
+            '<div class="result-title">已取消</div></div>';
+          var doneDiv2 = document.getElementById('streamDone');
+          doneDiv2.innerHTML = msg;
+          doneDiv2.style.display = 'block';
         }
         fetch('/cancel-generation', {
           method: 'POST',
