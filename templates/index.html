@@ -961,7 +961,7 @@
           <div class="message bot">
             <div class="avatar bot">🤖</div>
             <div class="message-content" id="streamMessage">
-              <div class="loading" style="display:flex;">
+              <div class="loading" id="streamLoading" style="display:flex;">
                 <div class="spinner"></div>
                 <span id="streamStatus">正在生成...</span>
               </div>
@@ -1574,6 +1574,10 @@
         document.getElementById('progressFill').style.width = Math.min(pct, 100) + '%';
         document.getElementById('progressText').textContent = Math.round(pct) + '%';
         document.getElementById('streamStatus').textContent = message;
+        if (pct >= 100) {
+          var sl = document.getElementById('streamLoading');
+          if (sl) sl.style.display = 'none';
+        }
       }
 
       function addStreamCase(c) {
@@ -1594,6 +1598,8 @@
         submitBtn.disabled = false;
         loading.classList.remove('active');
         loading.style.display = 'none';
+        var sl = document.getElementById('streamLoading');
+        if (sl) sl.style.display = 'none';
         document.getElementById('streamStatus').textContent = '已取消';
         document.getElementById('progressFill').style.width = '0%';
         document.getElementById('progressText').textContent = '';
@@ -1753,6 +1759,8 @@
               document.getElementById('cancelBtn').style.display = 'none';
               submitBtn.disabled = false;
               loading.classList.remove('active');
+              var sl = document.getElementById('streamLoading');
+              if (sl) sl.style.display = 'none';
               updateProgress(100, data.message || '生成完成');
               showStreamComplete(data);
             } else if (eventType === 'cancelled') {
@@ -1760,6 +1768,9 @@
               streamActive = false;
               document.getElementById('cancelBtn').style.display = 'none';
               submitBtn.disabled = false;
+              loading.classList.remove('active');
+              var sl = document.getElementById('streamLoading');
+              if (sl) sl.style.display = 'none';
               loading.classList.remove('active');
               updateProgress(0, '已取消');
               if (data.cases_count > 0) {
@@ -1772,6 +1783,8 @@
               document.getElementById('cancelBtn').style.display = 'none';
               submitBtn.disabled = false;
               loading.classList.remove('active');
+              var sl = document.getElementById('streamLoading');
+              if (sl) sl.style.display = 'none';
               updateProgress(0, '生成失败');
               var errDiv = document.getElementById('streamDone');
               errDiv.innerHTML = '<div class="message-content result-area error"><div class="result-title">生成失败</div><div>' + (data.error || '未知错误') + '</div></div>';
