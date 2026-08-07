@@ -1735,6 +1735,7 @@
                 }
               }
             } else if (eventType === 'complete') {
+              if (!streamActive) return;
               streamActive = false;
               document.getElementById('cancelBtn').style.display = 'none';
               submitBtn.disabled = false;
@@ -1742,6 +1743,7 @@
               updateProgress(100, data.message || '生成完成');
               showStreamComplete(data);
             } else if (eventType === 'cancelled') {
+              if (!streamActive) return;
               streamActive = false;
               document.getElementById('cancelBtn').style.display = 'none';
               submitBtn.disabled = false;
@@ -1752,6 +1754,7 @@
               }
               submitBtn.disabled = false;
             } else if (eventType === 'error') {
+              if (!streamActive) return;
               streamActive = false;
               document.getElementById('cancelBtn').style.display = 'none';
               submitBtn.disabled = false;

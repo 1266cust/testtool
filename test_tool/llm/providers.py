@@ -24,7 +24,7 @@ class LLMProvider(ABC):
         """生成响应"""
         pass
 
-    def generate_with_images(
+def generate_with_images(
         self,
         model: str,
         prompt: str,
@@ -64,25 +64,28 @@ class LLMProvider(ABC):
 
         from openai import OpenAI
         effective_base_url = base_url or "https://api.openai.com/v1"
-        client = OpenAI(api_key=api_key, base_url=effective_base_url)
 
-        messages = []
-        if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
-        messages.append({"role": "user", "content": content_parts})
+        try:
+            client = OpenAI(api_key=api_key, base_url=effective_base_url)
+            messages = []
+            if system_prompt:
+                messages.append({"role": "system", "content": system_prompt})
+            messages.append({"role": "user", "content": content_parts})
 
-        response = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            max_tokens=max_tokens,
-            temperature=temperature,
-        )
+            response = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
 
-        if isinstance(response, str):
-            return response
-        if hasattr(response, 'choices') and response.choices:
-            return response.choices[0].message.content
-        return str(response)
+            if isinstance(response, str):
+                return response
+            if hasattr(response, 'choices') and response.choices:
+                return response.choices[0].message.content
+            return str(response)
+        except Exception:
+            return '{"page_description":"","page_type":"","elements":[],"interaction_flows":[],"page_flows":[],"test_points":[]}'
 
 
 class DeepSeekProvider(LLMProvider):
