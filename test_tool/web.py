@@ -7,7 +7,7 @@ import uuid
 from pathlib import Path
 from zipfile import ZipFile
 
-from flask import Flask, abort, jsonify, render_template, request, send_file
+from flask import Flask, abort, jsonify, render_template, request, send_file, Response, stream_with_context
 
 from .exporters import export_cases_to_csv, export_cases_to_excel, export_cases_to_word
 from .generators import parse_requirement_path, generate_with_llm
@@ -378,6 +378,234 @@ def _perform_auto_fix(
     except Exception as e:
         logger.error(f"Auto-fix failed: {e}")
         return cases, "", []
+
+
+@app.post("/generate-stream")
+def generate_stream():
+    """SSE 流式生成测试用例"""
+    requirement_text = request.form.get("requirement_text", "").strip()
+    project_id = request.form.get("project_id", "").strip()
+    uploaded_docs = request.files.getlist("requirement_files")
+    uploaded_images = request.files.getlist("image_files")
+    output_format = request.form.get("output_format", "both")
+    min_cases_raw = request.form.get("min_cases", "300").strip()
+    generation_mode = request.form.get("generation_mode", "smart")
+    resume_job_id = request.form.get("resume_job_id", "").strip()
+
+    try:
+        min_cases = max(1, int(min_cases_raw))
+    except ValueError:
+        min_cases = 300
+
+    llm_env_config = load_llm_config()
+
+    if resume_job_id:
+        prev_state = []
+        from .generators.streaming import get_state, create_state, GenerationState
+        old_state = get_state(resume_job_id)
+        if old_state and old_state.output_dir:
+            prev_state = old_state.load_checkpoint()
+            if not prev_state:
+                from .generators.streaming import GenerationProgress
+                prev_state = []
+
+        job_id = resume_job_id
+        state = create_state(job_id)
+        state.output_dir = old_state.output_dir if old_state else None
+        state.progress.cases_count = len(prev_state)
+
+        def resume_stream():
+            yield f"event: resume\ndata: {json.dumps({'job_id': job_id, 'case_count': len(prev_state)}, ensure_ascii=False)}\n\n"
+            for c in prev_state:
+                from .generators.streaming import case_to_dict
+                yield f"event: partial_cases\ndata: {json.dumps({'job_id': job_id, 'cases': [case_to_dict(c)]}, ensure_ascii=False)}\n\n"
+            yield f"event: resume_done\ndata: {json.dumps({'job_id': job_id}, ensure_ascii=False)}\n\n"
+
+        return Response(
+            stream_with_context(resume_stream()),
+            mimetype="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+                "Connection": "keep-alive",
+            },
+        )
+
+    job_id = uuid.uuid4().hex[:12]
+    upload_dir = UPLOAD_ROOT / job_id
+    output_dir = OUTPUT_ROOT / job_id
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    saved_files: list[str] = []
+    for f in uploaded_docs:
+        if not f or not f.filename:
+            continue
+        is_valid, error_msg = validate_upload_file(f)
+        if not is_valid:
+            continue
+        safe_filename = _safe_name(f.filename)
+        if not safe_filename:
+            continue
+        target = upload_dir / safe_filename
+        f.save(str(target))
+        saved_files.append(safe_filename)
+
+    for f in uploaded_images:
+        if not f or not f.filename:
+            continue
+        is_valid, error_msg = validate_upload_file(f)
+        if not is_valid:
+            continue
+        safe_filename = _safe_name(f.filename)
+        if not safe_filename:
+            continue
+        target = upload_dir / safe_filename
+        f.save(str(target))
+        saved_files.append(safe_filename)
+
+    pasted_images = request.files.getlist("pasted_images")
+    for f in pasted_images:
+        if not f or not f.filename:
+            continue
+        safe_filename = _safe_name(f.filename)
+        if not safe_filename:
+            continue
+        ext = Path(safe_filename).suffix.lower()
+        if ext not in IMAGE_EXTENSIONS:
+            continue
+        target = upload_dir / safe_filename
+        f.save(str(target))
+        saved_files.append(safe_filename)
+
+    if requirement_text and not saved_files:
+        text_file = upload_dir / "user_input.txt"
+        text_file.write_text(requirement_text, encoding="utf-8")
+        saved_files.append("user_input.txt")
+
+    if not saved_files:
+        shutil.rmtree(upload_dir, ignore_errors=True)
+        shutil.rmtree(output_dir, ignore_errors=True)
+        def err_stream():
+            yield f"event: error\ndata: {json.dumps({'job_id': job_id, 'error': '请输入需求描述或上传文件。'}, ensure_ascii=False)}\n\n"
+        return Response(
+            stream_with_context(err_stream()),
+            mimetype="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
+
+    from .generators.streaming import (
+        create_state, streaming_generate_template, streaming_generate_llm,
+        format_sse, case_to_dict,
+    )
+    from .core.config import GenerationConfig, LLMGenerationConfig
+
+    llm_cfg = LLMGenerationConfig(
+        enabled=generation_mode == "smart",
+        api_key=llm_env_config.api_key,
+        base_url=llm_env_config.base_url,
+        provider=llm_env_config.provider,
+        model_name=llm_env_config.model_name,
+        vision_provider=llm_env_config.vision_provider,
+        vision_model_name=llm_env_config.vision_model_name,
+        vision_api_key=llm_env_config.vision_api_key,
+        vision_base_url=llm_env_config.vision_base_url,
+    )
+    cfg = GenerationConfig(llm_config=llm_cfg)
+
+    state = create_state(job_id, output_dir=output_dir)
+
+    def generate():
+        try:
+            stream = False
+            if generation_mode == "smart" and llm_cfg.api_key:
+                cases = yield from streaming_generate_llm(upload_dir, cfg, min_cases, state)
+            else:
+                cases = yield from streaming_generate_template(upload_dir, cfg, min_cases, state)
+
+            if state.cancelled:
+                yield format_sse("cancelled", {
+                    "job_id": job_id,
+                    "cases_count": len(cases),
+                    "message": "生成已取消",
+                })
+                return
+
+            if not cases:
+                yield format_sse("error", {
+                    "job_id": job_id,
+                    "error": "未从输入内容中生成测试用例。",
+                })
+                return
+
+            export_paths = []
+            if output_format in {"excel", "excel+word"}:
+                excel_path = output_dir / "test_cases.xlsx"
+                from .exporters import export_cases_to_excel
+                export_paths.append(export_cases_to_excel(cases, excel_path))
+            if output_format == "csv":
+                csv_path = output_dir / "test_cases.csv"
+                from .exporters import export_cases_to_csv
+                export_paths.append(export_cases_to_csv(cases, csv_path))
+            if output_format in {"word", "excel+word"}:
+                word_path = output_dir / "test_cases.docx"
+                from .exporters import export_cases_to_word
+                export_paths.append(export_cases_to_word(cases, word_path))
+
+            download_items = []
+            if output_format == "excel+word":
+                zip_path = output_dir / "test_cases_bundle.zip"
+                from zipfile import ZipFile
+                with ZipFile(zip_path, "w") as zf:
+                    for p in export_paths:
+                        zf.write(p, arcname=p.name)
+                download_items.append({"name": zip_path.name, "url": f"/download/{job_id}/{zip_path.name}"})
+            else:
+                for p in export_paths:
+                    download_items.append({"name": p.name, "url": f"/download/{job_id}/{p.name}"})
+
+            yield format_sse("complete", {
+                "job_id": job_id,
+                "cases_count": len(cases),
+                "message": f"已生成 {len(cases)} 条测试用例。",
+                "downloads": download_items,
+            })
+
+        except Exception as exc:
+            logger.error(f"Streaming generation failed: {exc}")
+            yield format_sse("error", {
+                "job_id": job_id,
+                "error": f"生成失败：{str(exc)}",
+            })
+        finally:
+            from .generators.streaming import remove_state
+            remove_state(job_id)
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
+
+
+@app.post("/cancel-generation")
+def cancel_generation():
+    """取消生成任务"""
+    data = request.get_json() or {}
+    job_id = data.get("job_id", "")
+    if not job_id:
+        return jsonify({"error": "未提供 job_id"}), 400
+
+    from .generators.streaming import get_state
+    state = get_state(job_id)
+    if state:
+        state.cancel()
+        return jsonify({"success": True, "job_id": job_id})
+    return jsonify({"error": "任务不存在"}), 404
 
 
 @app.post("/generate-code")

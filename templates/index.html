@@ -695,6 +695,42 @@
         font-size: 13px;
         text-align: center;
       }
+      .stream-case-item {
+        padding: 8px 12px;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        margin-bottom: 4px;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        animation: fadeIn 0.3s ease;
+      }
+      .stream-case-item .case-id {
+        font-weight: 600;
+        color: #667eea;
+        min-width: 80px;
+      }
+      .stream-case-item .case-name {
+        color: #374151;
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .stream-case-item .case-module {
+        font-size: 11px;
+        color: #6b7280;
+        background: #f3f4f6;
+        padding: 2px 6px;
+        border-radius: 4px;
+        white-space: nowrap;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-4px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
       .project-upload-actions {
         display: flex;
         gap: 12px;
@@ -919,6 +955,26 @@
           </div>
         </div>
         {% endif %}
+
+        <!-- 流式结果区域 -->
+        <div id="streamResult" style="display:none;">
+          <div class="message bot">
+            <div class="avatar bot">🤖</div>
+            <div class="message-content" id="streamMessage">
+              <div class="loading" style="display:flex;">
+                <div class="spinner"></div>
+                <span id="streamStatus">正在生成...</span>
+              </div>
+              <div class="progress-bar" style="margin-top:10px; background:#e5e7eb; border-radius:8px; height:8px; overflow:hidden;">
+                <div id="progressFill" style="width:0%; height:100%; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius:8px; transition:width 0.3s;"></div>
+              </div>
+              <div style="margin-top:8px; font-size:12px; color:#6b7280; text-align:center;" id="progressText">0%</div>
+            </div>
+          </div>
+          <div id="streamCases" style="max-height:400px; overflow-y:auto; margin-top:8px;"></div>
+          <div id="streamDone" style="display:none;"></div>
+          <button id="cancelBtn" class="submit-btn" style="background:linear-gradient(135deg, #ef4444 0%, #dc2626 100%); margin-top:10px; display:none;" onclick="cancelGeneration()">取消生成</button>
+        </div>
 
         {% if success %}
         <div class="message bot">
@@ -1497,23 +1553,70 @@
         input.value = '';
       }
 
+      let currentJobId = '';
+      let streamCases = [];
+      let streamActive = false;
+
+      function showStreamResult() {
+        document.getElementById('streamResult').style.display = 'block';
+        document.getElementById('cancelBtn').style.display = 'inline-block';
+        document.getElementById('streamCases').innerHTML = '';
+        streamCases = [];
+        streamActive = true;
+      }
+
+      function hideStreamResult() {
+        document.getElementById('streamResult').style.display = 'none';
+        streamActive = false;
+      }
+
+      function updateProgress(pct, message) {
+        document.getElementById('progressFill').style.width = Math.min(pct, 100) + '%';
+        document.getElementById('progressText').textContent = Math.round(pct) + '%';
+        document.getElementById('streamStatus').textContent = message;
+      }
+
+      function addStreamCase(c) {
+        const container = document.getElementById('streamCases');
+        const div = document.createElement('div');
+        div.className = 'stream-case-item';
+        div.innerHTML = '<span class="case-id">' + c.case_id + '</span>' +
+          '<span class="case-module">' + (c.module || '') + '</span>' +
+          '<span class="case-name">' + (c.name || '') + '</span>';
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+      }
+
+      function cancelGeneration() {
+        if (!currentJobId) return;
+        document.getElementById('cancelBtn').disabled = true;
+        document.getElementById('cancelBtn').textContent = '正在取消...';
+        fetch('/cancel-generation', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({job_id: currentJobId})
+        }).catch(function() {});
+      }
+
       mainForm.onsubmit = function(e) {
         e.preventDefault();
         submitBtn.disabled = true;
         loading.classList.add('active');
+        showStreamResult();
 
         const formData = new FormData();
-
         formData.append('requirement_text', requirementText.value);
-
         formData.append('generation_mode', generationMode.value);
         formData.append('enable_review', enableReview.checked ? 'on' : 'off');
         formData.append('enable_auto_fix', enableAutoFix.checked ? 'on' : 'off');
-
         const outputFormat = mainForm.querySelector('select[name="output_format"]').value;
         const minCases = mainForm.querySelector('input[name="min_cases"]').value;
         formData.append('output_format', outputFormat);
         formData.append('min_cases', minCases);
+        const projectSelect = document.getElementById('projectSelect');
+        if (projectSelect) {
+          formData.append('project_id', projectSelect.value);
+        }
 
         const docInput = document.getElementById('docInput');
         if (docInput.files.length > 0) {
@@ -1521,14 +1624,12 @@
             formData.append('requirement_files', file);
           }
         }
-
         const imgInput = document.getElementById('imgInput');
         if (imgInput.files.length > 0) {
           for (let file of imgInput.files) {
             formData.append('image_files', file);
           }
         }
-
         uploadedFiles.forEach(function(item, index) {
           if (item.type === 'img') {
             formData.append('image_files', item.file, 'pasted_image_' + index + '.png');
@@ -1537,20 +1638,128 @@
           }
         });
 
-        fetch('/generate', {
+        // SSE streaming via fetch
+        fetch('/generate-stream', {
           method: 'POST',
           body: formData
-        })
-        .then(response => response.text())
-        .then(html => {
-          document.open();
-          document.write(html);
-          document.close();
-        })
-        .catch(error => {
-          alert('生成失败：' + error);
-          submitBtn.disabled = false;
+        }).then(function(response) {
           loading.classList.remove('active');
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+
+          function readStream() {
+            reader.read().then(function(result) {
+              if (result.done) {
+                streamActive = false;
+                document.getElementById('cancelBtn').style.display = 'none';
+                return;
+              }
+              buffer += decoder.decode(result.value, {stream: true});
+              const lines = buffer.split('\n');
+              buffer = lines.pop() || '';
+              let eventType = '';
+              let eventData = '';
+
+              for (let line of lines) {
+                if (line.startsWith('event: ')) {
+                  eventType = line.substring(7).trim();
+                } else if (line.startsWith('data: ')) {
+                  eventData = line.substring(6).trim();
+                } else if (line === '' && eventType && eventData) {
+                  processEvent(eventType, eventData);
+                  eventType = '';
+                  eventData = '';
+                }
+              }
+              readStream();
+            }).catch(function(err) {
+              streamActive = false;
+              document.getElementById('cancelBtn').style.display = 'none';
+              if (streamCases.length > 0) {
+                showStreamComplete(streamCases.length + ' 条用例已生成（网络中断前保留）');
+              } else {
+                alert('连接中断：' + err);
+              }
+              submitBtn.disabled = false;
+            });
+          }
+
+          function processEvent(eventType, eventData) {
+            try {
+              var data = JSON.parse(eventData);
+            } catch(e) { return; }
+
+            if (eventType === 'progress') {
+              currentJobId = data.job_id;
+              updateProgress(data.pct || 0, data.message || '生成中...');
+              if (data.partial_cases) {
+                for (var i = 0; i < data.partial_cases.length; i++) {
+                  streamCases.push(data.partial_cases[i]);
+                  addStreamCase(data.partial_cases[i]);
+                }
+              }
+            } else if (eventType === 'partial_cases') {
+              if (data.cases) {
+                for (var i = 0; i < data.cases.length; i++) {
+                  streamCases.push(data.cases[i]);
+                  addStreamCase(data.cases[i]);
+                }
+              }
+            } else if (eventType === 'complete') {
+              streamActive = false;
+              document.getElementById('cancelBtn').style.display = 'none';
+              updateProgress(100, data.message || '生成完成');
+              showStreamComplete(data);
+            } else if (eventType === 'cancelled') {
+              streamActive = false;
+              document.getElementById('cancelBtn').style.display = 'none';
+              updateProgress(0, '已取消');
+              if (data.cases_count > 0) {
+                showStreamComplete(data.cases_count + ' 条用例已生成（已取消）');
+              }
+              submitBtn.disabled = false;
+            } else if (eventType === 'error') {
+              streamActive = false;
+              document.getElementById('cancelBtn').style.display = 'none';
+              updateProgress(0, '生成失败');
+              var errDiv = document.getElementById('streamDone');
+              errDiv.innerHTML = '<div class="message-content result-area error"><div class="result-title">生成失败</div><div>' + (data.error || '未知错误') + '</div></div>';
+              errDiv.style.display = 'block';
+              submitBtn.disabled = false;
+            }
+          }
+
+          function showStreamComplete(data) {
+            var doneDiv = document.getElementById('streamDone');
+            var msg = data.message || data.cases_count + ' 条测试用例已生成。';
+            var html = '<div class="message-content result-area"><div class="result-title">' + msg + '</div>';
+            if (data.downloads && data.downloads.length > 0) {
+              html += '<div class="download-links">';
+              for (var i = 0; i < data.downloads.length; i++) {
+                html += '<a class="download-link" href="' + data.downloads[i].url + '">' +
+                  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+                  '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>' +
+                  '<polyline points="7 10 12 15 17 10"></polyline>' +
+                  '<line x1="12" y1="15" x2="12" y2="3"></line></svg> ' +
+                  data.downloads[i].name + '</a>';
+              }
+              html += '</div>';
+            }
+            html += '</div>';
+            doneDiv.innerHTML = html;
+            doneDiv.style.display = 'block';
+            submitBtn.disabled = false;
+          }
+
+          readStream();
+        }).catch(function(error) {
+          loading.classList.remove('active');
+          streamActive = false;
+          document.getElementById('cancelBtn').style.display = 'none';
+          alert('请求失败：' + error);
+          submitBtn.disabled = false;
+          hideStreamResult();
         });
       };
 
