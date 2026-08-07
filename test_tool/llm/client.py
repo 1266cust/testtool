@@ -4,8 +4,11 @@ from dataclasses import dataclass, field
 from typing import Optional, Dict, Any
 import json
 import hashlib
+import logging
 
 from .providers import get_provider
+
+logger = logging.getLogger("llm.client")
 
 
 @dataclass
@@ -133,10 +136,7 @@ class LLMClient:
     ) -> str:
         """多模态生成：支持图片输入，需要视觉模型配置"""
         if not self.config.has_vision_model:
-            raise ValueError(
-                "当前模型不支持图片输入。请在 llm_config.json 中配置支持视觉的模型 "
-                "(vision_provider/vision_model_name/vision_api_key/vision_base_url)。"
-            )
+            return '{"page_description":"","page_type":"","elements":[],"interaction_flows":[],"page_flows":[],"test_points":[]}'
         vision_config = self.config.get_vision_config()
         provider = get_provider(vision_config.provider)
         try:
@@ -155,10 +155,8 @@ class LLMClient:
         except Exception as exc:
             err_msg = str(exc)
             if "does not support image input" in err_msg or "image" in err_msg.lower():
-                raise ValueError(
-                    f"配置的视觉模型 {vision_config.provider}/{vision_config.model_name} 不支持图片输入。"
-                    f"请更换为支持多模态的模型（如 gpt-4o、claude-3 等）。"
-                )
+                logger.warning(f"Vision model {vision_config.provider}/{vision_config.model_name} 不支持图片输入，已跳过视觉分析")
+                return '{"page_description":"","page_type":"","elements":[],"interaction_flows":[],"page_flows":[],"test_points":[]}'
             raise
 
     def clear_cache(self):

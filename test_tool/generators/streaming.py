@@ -290,6 +290,9 @@ def streaming_generate_llm(
 
     vision_test_points = []
     if image_paths and llm_config.has_vision_model:
+        if state.cancelled:
+            yield format_sse("cancelled", {"job_id": state.job_id, "cases_count": 0})
+            return []
         from ..ocr.multimodal_vision import MultimodalVisionAnalyzer
         vision_llm_client = LLMClient(llm_config.get_vision_config())
         vision_analyzer = MultimodalVisionAnalyzer(llm_client=vision_llm_client)
