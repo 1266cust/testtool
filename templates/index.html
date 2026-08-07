@@ -1590,21 +1590,18 @@
       function cancelGeneration() {
         if (!currentJobId) return;
         streamActive = false;
-        document.getElementById('cancelBtn').disabled = true;
-        document.getElementById('cancelBtn').textContent = '正在取消...';
+        document.getElementById('cancelBtn').style.display = 'none';
         submitBtn.disabled = false;
         loading.classList.remove('active');
+        loading.style.display = 'none';
+        if (streamCases.length > 0) {
+          showStreamComplete({cases_count: streamCases.length, message: streamCases.length + ' 条用例已生成（已取消）'});
+        }
         fetch('/cancel-generation', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({job_id: currentJobId})
         }).catch(function() {});
-        setTimeout(function() {
-          document.getElementById('cancelBtn').style.display = 'none';
-          if (streamCases.length > 0) {
-            showStreamComplete({cases_count: streamCases.length, message: streamCases.length + ' 条用例已生成（已取消）'});
-          }
-        }, 500);
       }
 
       function copyStreamCases() {
